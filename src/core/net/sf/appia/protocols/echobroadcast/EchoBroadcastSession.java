@@ -1,5 +1,8 @@
 package net.sf.appia.protocols.echobroadcast;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +15,10 @@ import net.sf.appia.core.Event;
 import net.sf.appia.core.Layer;
 import net.sf.appia.core.Session;
 import net.sf.appia.core.events.channel.ChannelInit;
+import net.sf.appia.protocols.common.RegisterSocketEvent;
+import net.sf.appia.xml.AppiaXML;
+import net.sf.appia.xml.interfaces.InitializableSession;
+import net.sf.appia.xml.utils.SessionProperties;
 
 /**
  * Echo Broadcast Layer
@@ -20,6 +27,8 @@ import net.sf.appia.core.events.channel.ChannelInit;
 public class EchoBroadcastSession extends Session {
 
 	private Channel channel;
+	private int localPort;
+	private List<InetSocketAddress> remoteProcesses;
 	
 	// receiver buffers
 	private List<EchoBroadcastEvent> replyBuffer;
@@ -27,18 +36,21 @@ public class EchoBroadcastSession extends Session {
 	// initiator buffers
 	private Map<Integer, List<EchoBroadcastEvent>> replyQueue;
 	private int sequenceNumber;
+
 	
 	public EchoBroadcastSession(Layer layer) {
 		super(layer);
 		replyBuffer = new ArrayList<EchoBroadcastEvent>();
 		replyQueue = new HashMap<Integer, List<EchoBroadcastEvent>>();
+		remoteProcesses = new ArrayList<InetSocketAddress> ();
 		sequenceNumber = 0;
 	}
+
 	
 	public void handle(Event event) {
 		if (event instanceof ChannelInit) {
-			channel = ((ChannelInit) event).getChannel();
-		} if (event instanceof EchoBroadcastEvent) {
+			
+		} else if (event instanceof EchoBroadcastEvent) {
 			handleEchoBroadcastEvent((EchoBroadcastEvent) event);
 		} else {
 			try {
@@ -47,6 +59,27 @@ public class EchoBroadcastSession extends Session {
 				appiaerror.printStackTrace();
 			}
 		}
+	}
+	
+	public void handleChannelInit(ChannelInit event) {
+		channel = ((ChannelInit) event).getChannel();
+		/*
+		
+		this.localPort = Integer.parseInt(params.getProperty("localport"));
+		final String[] remoteHost1 = params.getProperty("remotehost1").split(":");
+		final String[] remoteHost2 = params.getProperty("remotehost2").split(":");
+		
+		try {
+			this.remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost1[0]),
+					Integer.parseInt(remoteHost1[1])));
+			this.remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost2[0]),
+					Integer.parseInt(remoteHost2[1])));
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (NumberFormatException e) {
+			e.printStackTrace();
+		}
+		*/
 	}
 	
 	/** 
