@@ -15,6 +15,7 @@ public class ApplicationLayer extends Layer {
 		evProvide = new Class[] { RegisterSocketEvent.class };
 		evAccept = new Class[] { 
 				ChannelInit.class
+				,RegisterSocketEvent.class
 				, ChannelClose.class 
 				};
 	}

@@ -70,6 +70,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			handleChannelInit((ChannelInit)event);
 		} else if (event instanceof EchoBroadcastEvent) {
 			handleEchoBroadcastEvent((EchoBroadcastEvent) event);
+		} else if (event instanceof RegisterSocketEvent) {
+	         handleRSE((RegisterSocketEvent) event);
 		} else {
 			try {
 				event.go();
@@ -79,8 +81,24 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 	}
 	
+	private void handleRSE(RegisterSocketEvent event) {
+		// TODO Auto-generated method stub
+		try {
+			event.go();
+		} catch (AppiaEventException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 	public void handleChannelInit(ChannelInit event) {
 		channel = ((ChannelInit) event).getChannel();
+		
+		 try {
+	            event.go();
+	     } catch (AppiaEventException e) {
+	            e.printStackTrace();
+	     }
 	}
 	
 	/** 

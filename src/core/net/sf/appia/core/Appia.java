@@ -128,14 +128,14 @@ public class Appia {
     i=0;
     boolean consumedEvent;
     EventScheduler es;
-    
+
     while (true) {	
       try {
         es=eventSchedulers.elementAt(i);
       } catch (ArrayIndexOutOfBoundsException e) {
         es=null;
       }
-      
+	  
       if ( es != null )
         consumedEvent=es.consumeEvent();
       else

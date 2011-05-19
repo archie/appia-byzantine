@@ -18,7 +18,7 @@ public class SignedEchoBroadcast implements Runnable {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-		}		
+		}
 	}
 
 	@Override

@@ -127,6 +127,7 @@ public class Ecco {
 						"once in a channel");
 		    	System.exit(1);
 		    }
+		    
 		    Appia.run();
 		}
 		else {

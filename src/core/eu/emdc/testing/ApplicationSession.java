@@ -17,7 +17,7 @@ public class ApplicationSession extends Session {
 	private int localPort;
 	
 	public ApplicationSession(Layer layer) {
-		super(layer);		
+		super(layer);
 	}
 
 	
@@ -44,7 +44,7 @@ public class ApplicationSession extends Session {
 		}
 		
 		try {
-			new RegisterSocketEvent(channel, Direction.DOWN, this, localPort);
+			new RegisterSocketEvent(channel, Direction.DOWN, this, localPort).go();
 		} catch (AppiaEventException e) {
 			e.printStackTrace();
 		}

@@ -203,7 +203,8 @@ public class TcpCompleteSession extends Session
     }
   }
   
-  protected void handleRegisterSocket(RegisterSocketEvent e){
+  protected void handleRegisterSocket(RegisterSocketEvent e){	  
+  
       if(log.isDebugEnabled())
           log.debug("TCP Session received RegisterSocketEvent to register a socket in port "+e.port);
     ServerSocket ss= null;
@@ -211,7 +212,7 @@ public class TcpCompleteSession extends Session
     if(e.localHost == null){
         e.localHost = HostUtils.getLocalAddress();
     }
-    
+	
     if(ourPort < 0){
         if(e.port == RegisterSocketEvent.FIRST_AVAILABLE){
             try {
