@@ -1,10 +1,5 @@
 package eu.emdc.testing;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 
 import net.sf.appia.core.AppiaEventException;
 import net.sf.appia.core.Channel;
@@ -14,10 +9,8 @@ import net.sf.appia.core.Layer;
 import net.sf.appia.core.Session;
 import net.sf.appia.core.events.channel.ChannelInit;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
-import net.sf.appia.xml.interfaces.InitializableSession;
-import net.sf.appia.xml.utils.SessionProperties;
 
-public class ApplicationSession extends Session implements InitializableSession {
+public class ApplicationSession extends Session {
 
 
 	private Channel channel;
@@ -27,10 +20,6 @@ public class ApplicationSession extends Session implements InitializableSession 
 		super(layer);		
 	}
 
-	@Override
-	public void init(SessionProperties params) {
-		
-	}
 	
 	public void handle(Event event) {
 		if (event instanceof ChannelInit) {

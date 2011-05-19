@@ -17,13 +17,14 @@ public class EchoBroadcastLayer extends Layer {
 	public EchoBroadcastLayer() {
 		super();
 		evRequire = new Class[] { ChannelInit.class };
-		evProvide = new Class[] { };
+		evProvide = new Class[] { EchoBroadcastEvent.class };
 		evAccept = new Class[] { 
-				ChannelInit.class
-				, ChannelClose.class 
-				};
+				ChannelInit.class, 
+				EchoBroadcastEvent.class, 
+				ChannelClose.class 
+		};
 	}
-	
+
 	public Session createSession() {
 		return new EchoBroadcastSession(this);
 	}

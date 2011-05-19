@@ -24,7 +24,7 @@ import net.sf.appia.xml.utils.SessionProperties;
  * Echo Broadcast Layer
  * @author EMDC
  */
-public class EchoBroadcastSession extends Session {
+public class EchoBroadcastSession extends Session implements InitializableSession {
 
 	private Channel channel;
 	private int localPort;
@@ -45,25 +45,8 @@ public class EchoBroadcastSession extends Session {
 		remoteProcesses = new ArrayList<InetSocketAddress> ();
 		sequenceNumber = 0;
 	}
-
 	
-	public void handle(Event event) {
-		if (event instanceof ChannelInit) {
-			
-		} else if (event instanceof EchoBroadcastEvent) {
-			handleEchoBroadcastEvent((EchoBroadcastEvent) event);
-		} else {
-			try {
-				event.go();
-			} catch (AppiaEventException appiaerror) {
-				appiaerror.printStackTrace();
-			}
-		}
-	}
-	
-	public void handleChannelInit(ChannelInit event) {
-		channel = ((ChannelInit) event).getChannel();
-		/*
+	public void init(SessionProperties params) {
 		
 		this.localPort = Integer.parseInt(params.getProperty("localport"));
 		final String[] remoteHost1 = params.getProperty("remotehost1").split(":");
@@ -79,7 +62,25 @@ public class EchoBroadcastSession extends Session {
 		} catch (NumberFormatException e) {
 			e.printStackTrace();
 		}
-		*/
+	}
+
+	
+	public void handle(Event event) {
+		if (event instanceof ChannelInit) {
+			handleChannelInit((ChannelInit)event);
+		} else if (event instanceof EchoBroadcastEvent) {
+			handleEchoBroadcastEvent((EchoBroadcastEvent) event);
+		} else {
+			try {
+				event.go();
+			} catch (AppiaEventException appiaerror) {
+				appiaerror.printStackTrace();
+			}
+		}
+	}
+	
+	public void handleChannelInit(ChannelInit event) {
+		channel = ((ChannelInit) event).getChannel();
 	}
 	
 	/** 
