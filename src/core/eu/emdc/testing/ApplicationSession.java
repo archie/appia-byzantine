@@ -1,6 +1,8 @@
 package eu.emdc.testing;
 
 
+import java.util.Date;
+
 import net.sf.appia.core.AppiaEventException;
 import net.sf.appia.core.Channel;
 import net.sf.appia.core.Direction;
@@ -9,6 +11,7 @@ import net.sf.appia.core.Layer;
 import net.sf.appia.core.Session;
 import net.sf.appia.core.events.channel.ChannelInit;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
+import net.sf.appia.protocols.echobroadcast.EchoBroadcastEvent;
 import net.sf.appia.test.xml.ecco.MyShell;
 
 public class ApplicationSession extends Session {
@@ -29,6 +32,8 @@ public class ApplicationSession extends Session {
 			handleChannelEvent((ChannelInit) event);
 		} else if (event instanceof RegisterSocketEvent) {
 			handleRegisterSocketEvent((RegisterSocketEvent) event);
+		} else if (event instanceof EchoBroadcastEvent) {
+			handleEchoBroadcastEvent ((EchoBroadcastEvent) event);
 		} else {
 			try {
 				event.go();
@@ -47,6 +52,23 @@ public class ApplicationSession extends Session {
 		}		
 	}
 
+	private void handleEchoBroadcastEvent (EchoBroadcastEvent event)
+	{
+		if (event.getDir() == Direction.UP)
+		{
+			System.out.print("\n> " + event.getText()+"\n> ");
+		}
+		else
+		{	
+			try {
+				event.go ();
+			} catch (AppiaEventException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	private void handleRegisterSocketEvent(RegisterSocketEvent event) {
 		if (event.error) {
 			System.exit(-1);

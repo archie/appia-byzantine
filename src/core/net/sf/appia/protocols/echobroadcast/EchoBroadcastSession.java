@@ -65,14 +65,15 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		this.localPort = Integer.parseInt(params.getProperty("localport"));
 		final String[] remoteHost1 = params.getProperty("remotehost1").split(":");
 		final String[] remoteHost2 = params.getProperty("remotehost2").split(":");
-		N = remoteProcesses.size();
-		F = 0;
+		
 		
 		try {
-			this.remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost1[0]),
+			remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost1[0]),
 					Integer.parseInt(remoteHost1[1])));
-			this.remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost2[0]),
+			remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost2[0]),
 					Integer.parseInt(remoteHost2[1])));
+			N = remoteProcesses.size() + 1; // including yourself
+			F = 0; // Define later.
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (NumberFormatException e) {
@@ -107,6 +108,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 		
         local = new InetSocketAddress(event.localHost,event.port);
+        remoteProcesses.add(local);
 	}
 
 	public void handleChannelInit(ChannelInit event) {
@@ -154,6 +156,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		 * 		for all processes do
 		 * 			trigger < al, Send | q, [Send m]>;
 		 */
+		
 		echoEvent.dest = new AppiaMulticast (null, remoteProcesses.toArray());
 		try {
 			echoEvent.init();
@@ -177,13 +180,13 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		echoEvent.popValuesFromMessage();
 
 		if (echoEvent.isEcho()) {
-			System.err.println("Collect Echo Reply called");
+			//System.err.println("Collect Echo Reply called");
 			collectEchoReply(echoEvent);
 		} else if (echoEvent.isFinal() && !echoEvent.isEcho()) {
-			System.err.println("Deliver Final called");
+			//System.err.println("Deliver Final called");
 			deliverFinal(echoEvent);
 		} else if (!echoEvent.isEcho() && !echoEvent.isFinal()) {
-			System.err.println("Send Echo Reply called dst:" + echoEvent.dest + " src:" + echoEvent.source);
+			//System.err.println("Send Echo Reply called dst:" + echoEvent.dest + " src:" + echoEvent.source);
 			sendEchoReply(echoEvent);			
 		}
 	}
@@ -240,12 +243,10 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private void collectEchoReply(EchoBroadcastEvent echoEvent) {
 		
 		/* TODO: Verify signatures */
-		
-		System.err.println("Here");
 		// add to reply queue for previously sent message
 		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
 		
-		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > (N + F)/2 - 1)
+		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > (N + F)/2)
 		{		
 			boolean done = false;
 			List<String> alreadyCovered = new ArrayList<String> ();
@@ -274,10 +275,14 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 				}
 				
 				if (done == true)
+				{
+					sendFinal(echoEvent);
 					break;
+				}
+					
 			}
 			
-			System.err.println("After echo collection: " + done);
+//			System.err.println("After echo collection: " + done);
 		}
 		// if #echoes > (N+f)/2 is fulfilled
 		// 	send final
@@ -288,6 +293,28 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private void sendFinal(EchoBroadcastEvent echoEvent) {
 		// send final to all 
 		// -- reuse broadcast ?? 
+
+		//send final
+		EchoBroadcastEvent reply = new EchoBroadcastEvent ();
+		reply.setFinal(true);
+		reply.setSequenceNumber(echoEvent.getSequenceNumber());
+		reply.dest =  new AppiaMulticast (null, remoteProcesses.toArray());
+		reply.setSourceSession(this);
+		reply.setChannel(channel);
+		reply.setDir(Direction.DOWN);
+		reply.setText(echoEvent.getText());
+		
+		/* Add signatures here */
+		
+		reply.pushValuesToMessage();
+		// try sending reply to source
+		try {
+			reply.init();
+			reply.go();						
+		} catch (AppiaEventException appiaerror) {
+			appiaerror.printStackTrace();
+		}			
+		
 	}
 	
 	private void deliverFinal(EchoBroadcastEvent echoEvent) {
@@ -299,6 +326,21 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 		trigger bcb, Deliver | s, m ;
 
 		 */
+		
+		//System.err.println("Received final");
+		
+		/* need to verify if number of correct signatures is > N+F/2) */
+		if (stateMap.get(echoEvent.getSequenceNumber()).delivered == false)
+		{
+			stateMap.get(echoEvent.getSequenceNumber()).delivered = true;
+			try {
+			//	System.err.println("Deliver me :)");		
+				echoEvent.go();
+			} catch (AppiaEventException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 
 
