@@ -20,6 +20,8 @@ import net.sf.appia.protocols.common.RegisterSocketEvent;
 import net.sf.appia.xml.AppiaXML;
 import net.sf.appia.xml.interfaces.InitializableSession;
 import net.sf.appia.xml.utils.SessionProperties;
+import eu.emdc.testing.ProcessSet;
+import eu.emdc.testing.ProcessInitEvent;
 
 /**
  * Echo Broadcast Layer
@@ -30,7 +32,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private Channel channel;
 	private InetSocketAddress local;
 	private int localPort;
-	private List<InetSocketAddress> remoteProcesses;
+	private ProcessSet processes;
 	
 	private int N = 0;
 	private int F = 0;
@@ -56,35 +58,24 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		super(layer);
 		replyBuffer = new ArrayList<EchoBroadcastEvent>();
 		replyQueue = new HashMap<Integer, List<EchoBroadcastEvent>>();
-		remoteProcesses = new ArrayList<InetSocketAddress> ();
 		sequenceNumber = 0;
 	}
 	
 	public void init(SessionProperties params) {
 		
-		this.localPort = Integer.parseInt(params.getProperty("localport"));
-		final String[] remoteHost1 = params.getProperty("remotehost1").split(":");
-		final String[] remoteHost2 = params.getProperty("remotehost2").split(":");
+		//this.localPort = Integer.parseInt(params.getProperty("localport"));
+		processes = ProcessSet.buildProcessSet(params.getProperty("processes"),
+				Integer.parseInt(params.getProperty("myrank")));
+
 		
-		
-		try {
-			remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost1[0]),
-					Integer.parseInt(remoteHost1[1])));
-			remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost2[0]),
-					Integer.parseInt(remoteHost2[1])));
-			N = remoteProcesses.size() + 1; // including yourself
-			F = 0; // Define later.
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (NumberFormatException e) {
-			e.printStackTrace();
-		}
 	}
 
 	
 	public void handle(Event event) {
 		if (event instanceof ChannelInit) {
 			handleChannelInit((ChannelInit)event);
+		} else if (event instanceof ProcessInitEvent) {
+			handleProcessInitEvent((ProcessInitEvent) event);
 		} else if (event instanceof EchoBroadcastEvent) {
 			handleEchoBroadcastEvent((EchoBroadcastEvent) event);
 		} else if (event instanceof RegisterSocketEvent) {
@@ -98,6 +89,16 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 	}
 	
+	 private void handleProcessInitEvent(ProcessInitEvent event) {
+		    processes = event.getProcessSet();
+		    try {
+		      event.go();
+		    } catch (AppiaEventException e) {
+		      e.printStackTrace();
+		    }
+		  }
+
+	
 	private void handleRSE(RegisterSocketEvent event) {
 		// TODO Auto-generated method stub
 		try {
@@ -108,7 +109,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 		
         local = new InetSocketAddress(event.localHost,event.port);
-        remoteProcesses.add(local);
 	}
 
 	public void handleChannelInit(ChannelInit event) {
@@ -121,7 +121,9 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	     }
 	     
         try {
-            new RegisterSocketEvent(channel,Direction.DOWN,this,localPort).go();
+        	InetSocketAddress temp = (InetSocketAddress) processes.getSelfProcess().getSocketAddress();
+            new RegisterSocketEvent(channel,Direction.DOWN,
+            		this, temp.getPort()).go();
         } catch (AppiaEventException e1) {
             e1.printStackTrace();
         }
@@ -157,7 +159,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		 * 			trigger < al, Send | q, [Send m]>;
 		 */
 		
-		echoEvent.dest = new AppiaMulticast (null, remoteProcesses.toArray());
+		echoEvent.dest = new AppiaMulticast (null, processes.getAllSockets());
+		
 		try {
 			echoEvent.init();
 			echoEvent.go();			
@@ -298,7 +301,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		EchoBroadcastEvent reply = new EchoBroadcastEvent ();
 		reply.setFinal(true);
 		reply.setSequenceNumber(echoEvent.getSequenceNumber());
-		reply.dest =  new AppiaMulticast (null, remoteProcesses.toArray());
+		reply.dest =  new AppiaMulticast (null, processes.getAllSockets());
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
 		reply.setDir(Direction.DOWN);

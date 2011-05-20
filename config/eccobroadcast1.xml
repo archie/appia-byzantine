@@ -16,9 +16,8 @@
 	</template>
 	<channel name="ecco_c" template="ecco_t" initialized="yes">
 		<chsession name="ecco_s">
-			<parameter name="localport">4000</parameter>
-			<parameter name="remotehost1">192.168.1.94:4001</parameter>
-			<parameter name="remotehost2">192.168.1.94:4002</parameter>
+      <parameter name="myrank">0</parameter>
+			<parameter name="processes">config/processes.conf</parameter>
 		</chsession>
 	</channel>
 </appia>

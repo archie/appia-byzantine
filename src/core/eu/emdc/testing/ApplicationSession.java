@@ -45,6 +45,7 @@ public class ApplicationSession extends Session {
 	
 	private void handleChannelEvent(ChannelInit event) {
 		channel = ((ChannelInit) event).getChannel();
+				
 		try {
 			event.go();
 		} catch (AppiaEventException e) {
