@@ -32,6 +32,9 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private int localPort;
 	private List<InetSocketAddress> remoteProcesses;
 	
+	private int N = 0;
+	private int F = 0;
+	
 	// Attach state for each sequence number index.
 	private Map<Integer, StateTuple> stateMap = new HashMap<Integer, StateTuple>(); 
 	
@@ -39,7 +42,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private List<EchoBroadcastEvent> replyBuffer;
 	
 	// initiator buffers
-	private Map<Integer, List<EchoBroadcastEvent>> echos;
+	private Map<Integer, List<EchoBroadcastEvent>> replyQueue;
 	private int sequenceNumber;
 
 	/* The below holds state information for each broadcast */
@@ -52,7 +55,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	public EchoBroadcastSession(Layer layer) {
 		super(layer);
 		replyBuffer = new ArrayList<EchoBroadcastEvent>();
-		echos = new HashMap<Integer, List<EchoBroadcastEvent>>();
+		replyQueue = new HashMap<Integer, List<EchoBroadcastEvent>>();
 		remoteProcesses = new ArrayList<InetSocketAddress> ();
 		sequenceNumber = 0;
 	}
@@ -62,6 +65,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		this.localPort = Integer.parseInt(params.getProperty("localport"));
 		final String[] remoteHost1 = params.getProperty("remotehost1").split(":");
 		final String[] remoteHost2 = params.getProperty("remotehost2").split(":");
+		N = remoteProcesses.size();
+		F = 0;
 		
 		try {
 			this.remoteProcesses.add(new InetSocketAddress(InetAddress.getByName(remoteHost1[0]),
@@ -128,7 +133,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		int nextSequenceNumber = ++sequenceNumber;
 		
 		stateMap.put(nextSequenceNumber, new StateTuple ());
-		echos.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
+		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
 		
 		// for all processes		
 		echoEvent.setChannel(channel);
@@ -140,7 +145,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		echoEvent.setEcho(false);
 		echoEvent.setFinal(false);
 		echoEvent.setSequenceNumber(nextSequenceNumber);
-		
+				
+		echoEvent.pushValuesToMessage();
 		/*
 		 * Algorithm:
 		 * 
@@ -163,36 +169,50 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			echoBroadcast(event);
 			// Temporary: For now, just send to all
 		} else if (event.getDir() == Direction.UP) {
-			System.err.println("it sux man it sux");
 			pp2pdeliver(event);	
 		}
 	}
 	
-	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {				
+	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {
+		echoEvent.popValuesFromMessage();
+
 		if (echoEvent.isEcho()) {
+			System.err.println("Collect Echo Reply called");
 			collectEchoReply(echoEvent);
-		} else if (echoEvent.isFinal() && !echoEvent.isEcho()) {	
+		} else if (echoEvent.isFinal() && !echoEvent.isEcho()) {
+			System.err.println("Deliver Final called");
 			deliverFinal(echoEvent);
 		} else if (!echoEvent.isEcho() && !echoEvent.isFinal()) {
+			System.err.println("Send Echo Reply called dst:" + echoEvent.dest + " src:" + echoEvent.source);
 			sendEchoReply(echoEvent);			
 		}
 	}
 	
-	private void sendEchoReply(EchoBroadcastEvent echoEvent) {		
+	private void sendEchoReply(EchoBroadcastEvent echoEvent) {
 		if (alreadyReplied(echoEvent)) {
 			return;
 		}
 		
+		if (!stateMap.containsKey(echoEvent.getSequenceNumber()))
+		{
+			StateTuple st = new StateTuple ();
+			st.sentEcho = true;
+			stateMap.put (echoEvent.getSequenceNumber(), st);
+			
+		}
+		
 		EchoBroadcastEvent reply = new EchoBroadcastEvent();
+		
+		// Need to sign the below.
 		reply.setEcho(true);
 		reply.setSequenceNumber(echoEvent.getSequenceNumber());
 		reply.dest = echoEvent.source;
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
 		reply.setDir(Direction.DOWN);
+		reply.setText(echoEvent.getText()); // Not sure why this is needed but lolz - Lalith
 		
-		System.err.println("I'm replying to the echo");
-		/*
+		reply.pushValuesToMessage();
 		// try sending reply to source
 		try {
 			reply.init();
@@ -202,8 +222,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			replyBuffer.add(echoEvent);
 		} catch (AppiaEventException appiaerror) {
 			appiaerror.printStackTrace();
-		}
-		*/			
+		}			
 	}
 
 	private boolean alreadyReplied(EchoBroadcastEvent echoEvent) {
@@ -219,9 +238,47 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	}
 
 	private void collectEchoReply(EchoBroadcastEvent echoEvent) {
-		// add to reply queue for previously sent message
-		echos.get(echoEvent.getSequenceNumber()).add(echoEvent);
 		
+		/* TODO: Verify signatures */
+		
+		System.err.println("Here");
+		// add to reply queue for previously sent message
+		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
+		
+		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > (N + F)/2 - 1)
+		{		
+			boolean done = false;
+			List<String> alreadyCovered = new ArrayList<String> ();
+			for (EchoBroadcastEvent ebe1 : replyQueue.get (echoEvent.getSequenceNumber())) {
+				int num = 0;
+				
+				if (alreadyCovered.contains(ebe1.getText()))
+				{
+					continue;
+				}
+				else
+				{
+					alreadyCovered.add(ebe1.getText());
+					// Verify if we have > (N + F)/2 identical msgs.
+					for (EchoBroadcastEvent ebe2 : replyQueue.get (echoEvent.getSequenceNumber())) {
+						if (ebe1.getText().equals(ebe2.getText()))
+						{
+							num++;
+							if (num > (N + F)/2)
+							{
+								done = true;
+								break;
+							}
+						}
+					}
+				}
+				
+				if (done == true)
+					break;
+			}
+			
+			System.err.println("After echo collection: " + done);
+		}
 		// if #echoes > (N+f)/2 is fulfilled
 		// 	send final
 		// else 

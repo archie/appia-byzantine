@@ -1,13 +1,17 @@
 package net.sf.appia.protocols.echobroadcast;
 
+import com.sun.org.apache.bcel.internal.generic.NEW;
+
+import net.sf.appia.core.Event;
 import net.sf.appia.core.events.SendableEvent;
+import net.sf.appia.core.message.Message;
 
 /**
  * 
  * @author EMDC
  *
  */
-public class EchoBroadcastEvent extends SendableEvent {
+public class EchoBroadcastEvent extends SendableEvent implements Cloneable{
 	
 	private boolean isEcho;
 	private boolean isFinal;
@@ -39,7 +43,7 @@ public class EchoBroadcastEvent extends SendableEvent {
 	public int getSequenceNumber() {
 		return sequenceNumber;
 	}
-
+	
 	public void setText (String txt) {
 		this.text = txt;
 	}
@@ -47,5 +51,20 @@ public class EchoBroadcastEvent extends SendableEvent {
 	public String getText () {
 		return this.text;
 	}
-		
+	
+	public void pushValuesToMessage () {
+		Message msg = getMessage();
+		msg.pushInt(sequenceNumber);
+		msg.pushBoolean(isEcho);
+		msg.pushBoolean(isFinal);
+		msg.pushString(text);
+	}
+
+	public void popValuesFromMessage () {
+		Message msg = getMessage();
+		text = msg.popString();
+		isFinal = msg.popBoolean();
+		isEcho = msg.popBoolean();
+		sequenceNumber = msg.popInt();
+	}
 }
