@@ -14,6 +14,7 @@ import net.sf.appia.core.Direction;
 import net.sf.appia.core.Event;
 import net.sf.appia.core.Layer;
 import net.sf.appia.core.Session;
+import net.sf.appia.core.events.AppiaMulticast;
 import net.sf.appia.core.events.channel.ChannelInit;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
 import net.sf.appia.xml.AppiaXML;
@@ -27,6 +28,7 @@ import net.sf.appia.xml.utils.SessionProperties;
 public class EchoBroadcastSession extends Session implements InitializableSession {
 
 	private Channel channel;
+	private InetSocketAddress local;
 	private int localPort;
 	private List<InetSocketAddress> remoteProcesses;
 	
@@ -89,6 +91,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+        local = new InetSocketAddress(event.localHost,event.port);
 	}
 
 	public void handleChannelInit(ChannelInit event) {
@@ -99,12 +103,19 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	     } catch (AppiaEventException e) {
 	            e.printStackTrace();
 	     }
+	     
+        try {
+            new RegisterSocketEvent(channel,Direction.DOWN,this,localPort).go();
+        } catch (AppiaEventException e1) {
+            e1.printStackTrace();
+        }
 	}
 	
 	/** 
 	 * Initiate a broadcast of a message
 	 */
 	public void echoBroadcast(EchoBroadcastEvent echoEvent) {
+				
 		int nextSequenceNumber = ++sequenceNumber;
 		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
 		
@@ -113,6 +124,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		echoEvent.setDir(Direction.DOWN);
 		echoEvent.setSourceSession(this);
 		// echoEvent.dest = ??? where is this coming from - a set of processes
+		//echoEvent.dest = new AppiaMulticast (null, remoteProcesses.toArray());
+		echoEvent.dest = remoteProcesses.get(0);
 		
 		echoEvent.setEcho(false);
 		echoEvent.setFinal(false);
@@ -129,6 +142,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
 		if (event.getDir() == Direction.DOWN) {
 			// something
+			echoBroadcast(event);
+			// Temporary: For now, just send to all
 		} else if (event.getDir() == Direction.UP) {
 			pp2pdeliver(event);	
 		}

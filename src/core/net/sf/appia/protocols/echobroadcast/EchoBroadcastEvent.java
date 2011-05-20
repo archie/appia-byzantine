@@ -11,6 +11,7 @@ public class EchoBroadcastEvent extends SendableEvent {
 	private boolean isEcho;
 	private boolean isFinal;
 	private int sequenceNumber;
+	private String text;
 
 	public void setEcho(boolean isEcho) {
 		this.isEcho = isEcho;
@@ -34,6 +35,14 @@ public class EchoBroadcastEvent extends SendableEvent {
 	
 	public int getSequenceNumber() {
 		return sequenceNumber;
+	}
+
+	public void setText (String txt) {
+		this.text = txt;
+	}
+	
+	public String getText () {
+		return this.text;
 	}
 		
 }

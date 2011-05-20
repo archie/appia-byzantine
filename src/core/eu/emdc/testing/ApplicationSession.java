@@ -9,12 +9,15 @@ import net.sf.appia.core.Layer;
 import net.sf.appia.core.Session;
 import net.sf.appia.core.events.channel.ChannelInit;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
+import net.sf.appia.test.xml.ecco.MyShell;
 
 public class ApplicationSession extends Session {
 
 
 	private Channel channel;
 	private int localPort;
+	
+    private ApplicationShell shell;
 	
 	public ApplicationSession(Layer layer) {
 		super(layer);
@@ -41,22 +44,20 @@ public class ApplicationSession extends Session {
 			event.go();
 		} catch (AppiaEventException e) {
 			e.printStackTrace();
-		}
-		
-		try {
-			new RegisterSocketEvent(channel, Direction.DOWN, this, localPort).go();
-		} catch (AppiaEventException e) {
-			e.printStackTrace();
-		}
+		}		
 	}
 
 	private void handleRegisterSocketEvent(RegisterSocketEvent event) {
 		if (event.error) {
-			System.err.println("Error registering socket");
 			System.exit(-1);
 		} else {
 			// start debugging shell
 			System.out.println("Started application ... ");
+
+	        shell = new ApplicationShell (channel);
+	        final Thread t = event.getChannel().getThreadFactory().newThread(shell);
+	        t.setName("Ecco shell");
+	        t.start();
 		}
 	}
 

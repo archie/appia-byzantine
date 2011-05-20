@@ -193,6 +193,9 @@ public class TcpCompleteSession extends Session
     } else if (e.dest instanceof InetSocketAddress) {
       send(data, (InetSocketAddress)e.dest, e.getChannel());
     } else {
+    	
+      if (e.dest == null)
+    	  System.err.println("Null destination InetSocketAddress?");
       sendUndelivered(e.getChannel(),(InetSocketAddress) e.dest);
     }
     
