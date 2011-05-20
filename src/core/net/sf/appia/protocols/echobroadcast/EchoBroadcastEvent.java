@@ -8,10 +8,9 @@ import net.sf.appia.core.events.SendableEvent;
  *
  */
 public class EchoBroadcastEvent extends SendableEvent {
+	
 	private boolean isEcho;
 	private boolean isFinal;
-	private int sequenceNumber;
-	private String text;
 
 	public void setEcho(boolean isEcho) {
 		this.isEcho = isEcho;
@@ -28,7 +27,11 @@ public class EchoBroadcastEvent extends SendableEvent {
 	public boolean isFinal() {
 		return isFinal;
 	}
-
+	
+	
+	private int sequenceNumber;	
+	private String text;
+	
 	public void setSequenceNumber(int i) {
 		sequenceNumber = i;
 	} 

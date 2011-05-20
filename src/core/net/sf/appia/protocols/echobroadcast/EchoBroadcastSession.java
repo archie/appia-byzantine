@@ -32,18 +32,27 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private int localPort;
 	private List<InetSocketAddress> remoteProcesses;
 	
+	// Attach state for each sequence number index.
+	private Map<Integer, StateTuple> stateMap = new HashMap<Integer, StateTuple>(); 
+	
 	// receiver buffers
 	private List<EchoBroadcastEvent> replyBuffer;
 	
 	// initiator buffers
-	private Map<Integer, List<EchoBroadcastEvent>> replyQueue;
+	private Map<Integer, List<EchoBroadcastEvent>> echos;
 	private int sequenceNumber;
 
+	/* The below holds state information for each broadcast */
+	private class StateTuple {
+		public boolean sentEcho = false;
+		public boolean sentFinal = false;
+		public boolean delivered = false;
+	}
 	
 	public EchoBroadcastSession(Layer layer) {
 		super(layer);
 		replyBuffer = new ArrayList<EchoBroadcastEvent>();
-		replyQueue = new HashMap<Integer, List<EchoBroadcastEvent>>();
+		echos = new HashMap<Integer, List<EchoBroadcastEvent>>();
 		remoteProcesses = new ArrayList<InetSocketAddress> ();
 		sequenceNumber = 0;
 	}
@@ -117,20 +126,29 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	public void echoBroadcast(EchoBroadcastEvent echoEvent) {
 				
 		int nextSequenceNumber = ++sequenceNumber;
-		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
+		
+		stateMap.put(nextSequenceNumber, new StateTuple ());
+		echos.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
 		
 		// for all processes		
 		echoEvent.setChannel(channel);
 		echoEvent.setDir(Direction.DOWN);
 		echoEvent.setSourceSession(this);
 		// echoEvent.dest = ??? where is this coming from - a set of processes
-		//echoEvent.dest = new AppiaMulticast (null, remoteProcesses.toArray());
-		echoEvent.dest = remoteProcesses.get(0);
+		
 		
 		echoEvent.setEcho(false);
 		echoEvent.setFinal(false);
 		echoEvent.setSequenceNumber(nextSequenceNumber);
 		
+		/*
+		 * Algorithm:
+		 * 
+		 * upon event < bcb, Broadcast | m > do
+		 * 		for all processes do
+		 * 			trigger < al, Send | q, [Send m]>;
+		 */
+		echoEvent.dest = new AppiaMulticast (null, remoteProcesses.toArray());
 		try {
 			echoEvent.init();
 			echoEvent.go();			
@@ -145,6 +163,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			echoBroadcast(event);
 			// Temporary: For now, just send to all
 		} else if (event.getDir() == Direction.UP) {
+			System.err.println("it sux man it sux");
 			pp2pdeliver(event);	
 		}
 	}
@@ -172,6 +191,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		reply.setChannel(channel);
 		reply.setDir(Direction.DOWN);
 		
+		System.err.println("I'm replying to the echo");
+		/*
 		// try sending reply to source
 		try {
 			reply.init();
@@ -181,7 +202,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			replyBuffer.add(echoEvent);
 		} catch (AppiaEventException appiaerror) {
 			appiaerror.printStackTrace();
-		}			
+		}
+		*/			
 	}
 
 	private boolean alreadyReplied(EchoBroadcastEvent echoEvent) {
@@ -198,7 +220,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 
 	private void collectEchoReply(EchoBroadcastEvent echoEvent) {
 		// add to reply queue for previously sent message
-		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
+		echos.get(echoEvent.getSequenceNumber()).add(echoEvent);
 		
 		// if #echoes > (N+f)/2 is fulfilled
 		// 	send final
