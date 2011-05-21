@@ -3,13 +3,10 @@ package net.sf.appia.protocols.echobroadcast;
 import java.io.FileInputStream;
 import java.net.SocketAddress;
 import java.security.KeyStore;
-import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import sun.misc.BASE64Decoder;
 
 import net.sf.appia.core.AppiaEventException;
 import net.sf.appia.core.Channel;
@@ -397,10 +394,7 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 			
 		}
 		
-		echoEvent.getMessage().pushInt(echoEvent.getSequenceNumber());
-		echoEvent.getMessage().pushBoolean(true);
-		echoEvent.getMessage().pushBoolean(false);
-		echoEvent.getMessage().pushString(echoEvent.getText());
+		Message echoMessage = getEchoMessage(echoEvent);
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
 		{
 			sigma = sigmas[i];
@@ -408,7 +402,7 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 			if (!sigma.equals(bottom))
 			{
 				try {
-					if(verifySignature(echoEvent.getMessage(), alias, sigma))
+					if(SignatureSession.verifySignature(echoMessage, alias, sigma, trustedStore))
 					{
 						verified++;
 					}
@@ -417,11 +411,6 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 				}
 			}
 		}
-		
-		echoEvent.getMessage().popString();
-		echoEvent.getMessage().popBoolean();
-		echoEvent.getMessage().popBoolean();
-		echoEvent.getMessage().popInt();
 		
 		if (delivered == false && verified > Math.ceil((N+F)/2.0))
 		{
@@ -439,28 +428,22 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 			}			
 		}
 	}
-
-	public boolean verifySignature (Message message, String userAlias, String signature) throws Exception
-	{
-		BASE64Decoder dec = new BASE64Decoder();
-		if(trustedStore.containsAlias(userAlias)){
-			Certificate userCert = trustedStore.getCertificate(userAlias);
-			message.pushString(userAlias);
-			if(SignatureSession.verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
-				System.out.println("Deliver Sign blah : Signature of user " + userAlias + " succesfully verified");
-				message.popString();
-				return true;
-			} else {
-				System.err.println("Failure on verifying signature of user " + userAlias + ".");
-			}
-			message.popString();
-		} else {
-			System.err.println("Received message from untrusted user: " + userAlias + ".");
-		}
-		
-		return false;
-	}
 	
+	private Message getEchoMessage(EchoBroadcastEvent echoEvent) {
+		Message clonedMsg = null;
+		try {
+			clonedMsg = (Message) echoEvent.getMessage().clone();
+			clonedMsg.pushInt(echoEvent.getSequenceNumber());
+			clonedMsg.pushBoolean(true);
+			clonedMsg.pushBoolean(false);
+			clonedMsg.pushString(echoEvent.getText());
+		} catch (CloneNotSupportedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return clonedMsg;
+	}
+
 	public void reset ()
 	{
 		sentEcho = false;
