@@ -20,6 +20,8 @@ import net.sf.appia.protocols.byzantineconsistentchannel.ByzantineConsistentChan
 import net.sf.appia.protocols.byzantineconsistentchannel.ByzantineConsistentChannelSession;
 import net.sf.appia.protocols.echobroadcast.EchoBroadcastLayer;
 import net.sf.appia.protocols.echobroadcast.EchoBroadcastSession;
+import net.sf.appia.protocols.signing.SignatureLayer;
+import net.sf.appia.protocols.signing.SignatureSession;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteLayer;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteSession;
 import net.sf.appia.test.xml.ecco.EccoLayer;
@@ -40,7 +42,7 @@ private static final int NUMBER_OF_ARGS = 3;
 	
 	public static void main(String[] args) {
 		
-		if (args.length == 2) {
+		if (args.length == 4) {
 						
 			TcpCompleteLayer tcplayer = new TcpCompleteLayer();
 			ByzantineConsistentChannelLayer ebl = new ByzantineConsistentChannelLayer();
@@ -63,9 +65,12 @@ private static final int NUMBER_OF_ARGS = 3;
 			
 			final String processfile = args[0];
 			final int rank = Integer.parseInt(args[1]);
+			final String alias = args[2];
+			final String usercerts = args[3];
 			
 			as.init(processfile, rank);
-			ebs.init(processfile, rank);
+			
+			ebs.init(processfile, rank, alias, usercerts);
 			
 			Channel channel = myQoS.createUnboundChannel("Print Channel");
 			ChannelCursor cc = channel.getCursor();
@@ -73,7 +78,7 @@ private static final int NUMBER_OF_ARGS = 3;
 			try {
 				cc.bottom();
 				cc.setSession(tcpsession);
-				cc.up ();
+				cc.up();
 				cc.setSession(ebs);
 				cc.up();
 				cc.setSession(as);

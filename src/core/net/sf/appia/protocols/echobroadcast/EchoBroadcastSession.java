@@ -1,12 +1,15 @@
 package net.sf.appia.protocols.echobroadcast;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
+import java.io.FileInputStream;
+import java.net.SocketAddress;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import sun.misc.BASE64Decoder;
 
 import net.sf.appia.core.AppiaEventException;
 import net.sf.appia.core.Channel;
@@ -16,12 +19,13 @@ import net.sf.appia.core.Layer;
 import net.sf.appia.core.Session;
 import net.sf.appia.core.events.AppiaMulticast;
 import net.sf.appia.core.events.channel.ChannelInit;
+import net.sf.appia.core.message.Message;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
-import net.sf.appia.xml.AppiaXML;
+import net.sf.appia.protocols.signing.SignatureSession;
 import net.sf.appia.xml.interfaces.InitializableSession;
 import net.sf.appia.xml.utils.SessionProperties;
-import eu.emdc.testing.ProcessSet;
 import eu.emdc.testing.ProcessInitEvent;
+import eu.emdc.testing.ProcessSet;
 
 /**
  * Echo Broadcast Layer
@@ -32,9 +36,16 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private Channel channel;
 	private Channel deliverToChannel = null;
 	private ProcessSet processes;
-	
+    private KeyStore trustedStore;
+    	
 	private int N = 0;
 	private int F = 0;
+	
+    /*
+     * KeyStore, format  used to store the keys.
+     * Ex: "JKS"
+     */
+    private String storeType = "JKS";
 	
 	// Attach state for each sequence number index.
 	// private Map<Integer, StateTuple> stateMap = new HashMap<Integer, StateTuple>(); 
@@ -51,6 +62,14 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	public boolean sentEcho = false;
 	public boolean sentFinal = false;
 	public boolean delivered = false;
+	
+	private String [] sigmas;
+	private String [] aliases;
+	
+	private String trustedCertsFile;
+	private char[] trustedCertsPass;
+	
+	final String bottom = "BOTTOM";
 	
 	
 	public EchoBroadcastSession(Layer layer) {
@@ -69,10 +88,23 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		
 	}
 	
-	public void init(String processfile, int rank) {
+	public void init(String processfile, int rank, String trustedcertsfile, String trustedcertspass) {
 		
 		processes = ProcessSet.buildProcessSet(processfile,rank);
 		
+    	trustedCertsFile = trustedcertsfile;
+    	trustedCertsPass = trustedcertspass.toCharArray();
+    	
+    	try{
+            
+            trustedStore = KeyStore.getInstance(storeType);
+            trustedStore.load(new FileInputStream(trustedCertsFile), trustedCertsPass);
+    	} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		aliases = new String [processes.getAllProcesses().length];
+		sigmas = new String [processes.getAllProcesses().length];	
 	}
 	
 	/* Manual channel setting */
@@ -136,6 +168,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	public void echoBroadcast(EchoBroadcastEvent echoEvent) {
 				
 		int nextSequenceNumber = ++sequenceNumber;
+				
+		N = processes.getAllProcesses().length;
 		
 		//stateMap.put(nextSequenceNumber, new StateTuple ());
 		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
@@ -184,11 +218,18 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	}
 	
 	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {
+		/* Pop the signature and alias out of the message because
+		 * we always have a SignatureSession below us. Failing to
+		 * do so will result in bad things.
+		 */
+		String signature = echoEvent.getMessage().popString();
+		String alias = echoEvent.getMessage().popString();
+		
 		echoEvent.popValuesFromMessage();
 
 		if (echoEvent.isEcho()) {
 			//System.err.println("Collect Echo Reply called");
-			collectEchoReply(echoEvent);
+			collectEchoReply(echoEvent, alias, signature);
 		} else if (echoEvent.isFinal() && !echoEvent.isEcho()) {
 			//System.err.println("Deliver Final called");
 			deliverFinal(echoEvent);
@@ -241,15 +282,22 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		return false;
 	}
 
-	private void collectEchoReply(EchoBroadcastEvent echoEvent) {
+	private void collectEchoReply(EchoBroadcastEvent echoEvent, String alias, String signature) {
 		
 		/* TODO: Verify signatures */
 		// add to reply queue for previously sent message
 				
+		SocketAddress sa = (SocketAddress) echoEvent.source;
+		
+		System.err.println("GotSometingfrom PID: " + processes.getRank(sa));
+		aliases[processes.getRank(sa)] = alias;
+		sigmas[processes.getRank(sa)] = signature;
+				
 		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
 		
-		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > (N + F)/2)
-		{		
+		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > (N + F)/2 && sentFinal == false)
+		{
+			
 			boolean done = false;
 			List<String> alreadyCovered = new ArrayList<String> ();
 			for (EchoBroadcastEvent ebe1 : replyQueue.get (echoEvent.getSequenceNumber())) {
@@ -294,6 +342,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		// send final to all 
 		// -- reuse broadcast ?? 
 		//send final
+		sentFinal = true;
 		EchoBroadcastEvent reply = new EchoBroadcastEvent ();
 		reply.setFinal(true);
 		reply.setSequenceNumber(echoEvent.getSequenceNumber());
@@ -304,6 +353,18 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		reply.setText(echoEvent.getText());
 		
 		/* Add signatures here */
+		
+		for (int i = 0; i < processes.getAllProcesses().length; i++)
+		{			
+			
+			try{
+				reply.getMessage().pushString(aliases[i]);
+				reply.getMessage().pushString(sigmas[i]);
+			} catch (NullPointerException e){
+				reply.getMessage().pushString(bottom);
+				reply.getMessage().pushString(bottom);
+			}
+		}
 		
 		reply.pushValuesToMessage();
 		// try sending reply to source
@@ -326,10 +387,43 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 
 		 */
 		
-		//System.err.println("Deliver final");
+		String sigma, alias;
+		int verified = 0;
+		for (int i = 0; i < processes.getAllProcesses().length; i++)
+		{
+			
+			sigmas[i] = echoEvent.getMessage().popString();
+			aliases[i] = echoEvent.getMessage().popString();
+			
+		}
 		
-		/* need to verify if number of correct signatures is > N+F/2) */
-		if (delivered == false)
+		echoEvent.getMessage().pushInt(echoEvent.getSequenceNumber());
+		echoEvent.getMessage().pushBoolean(true);
+		echoEvent.getMessage().pushBoolean(false);
+		echoEvent.getMessage().pushString(echoEvent.getText());
+		for (int i = 0; i < processes.getAllProcesses().length; i++)
+		{
+			sigma = sigmas[i];
+			alias = aliases[i];
+			if (!sigma.equals(bottom))
+			{
+				try {
+					if(verifySignature(echoEvent.getMessage(), alias, sigma))
+					{
+						verified++;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		echoEvent.getMessage().popString();
+		echoEvent.getMessage().popBoolean();
+		echoEvent.getMessage().popBoolean();
+		echoEvent.getMessage().popInt();
+		
+		if (delivered == false && verified > Math.ceil((N+F)/2.0))
 		{
 			delivered = true;
 			try {
@@ -346,11 +440,34 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 		}
 	}
 
+	public boolean verifySignature (Message message, String userAlias, String signature) throws Exception
+	{
+		BASE64Decoder dec = new BASE64Decoder();
+		if(trustedStore.containsAlias(userAlias)){
+			Certificate userCert = trustedStore.getCertificate(userAlias);
+			message.pushString(userAlias);
+			if(SignatureSession.verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
+				System.out.println("Deliver Sign blah : Signature of user " + userAlias + " succesfully verified");
+				message.popString();
+				return true;
+			} else {
+				System.err.println("Failure on verifying signature of user " + userAlias + ".");
+			}
+			message.popString();
+		} else {
+			System.err.println("Received message from untrusted user: " + userAlias + ".");
+		}
+		
+		return false;
+	}
+	
 	public void reset ()
 	{
 		sentEcho = false;
 		sentFinal = false;
 		delivered = false;
+		aliases = new String [processes.getAllProcesses().length];
+		sigmas = new String [processes.getAllProcesses().length];
 	}
 
 }

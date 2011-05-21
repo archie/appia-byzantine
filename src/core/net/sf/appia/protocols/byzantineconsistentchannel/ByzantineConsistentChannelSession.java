@@ -26,6 +26,8 @@ import net.sf.appia.protocols.common.RegisterSocketEvent;
 import net.sf.appia.protocols.echobroadcast.EchoBroadcastEvent;
 import net.sf.appia.protocols.echobroadcast.EchoBroadcastLayer;
 import net.sf.appia.protocols.echobroadcast.EchoBroadcastSession;
+import net.sf.appia.protocols.signing.SignatureLayer;
+import net.sf.appia.protocols.signing.SignatureSession;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteLayer;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteSession;
 import net.sf.appia.xml.AppiaXML;
@@ -46,6 +48,8 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	private int [] sequenceNumbers;
 	private EchoBroadcastLayer [] bcls;
 	private EchoBroadcastSession [] bcbs;
+	private SignatureLayer siglayer;
+	private SignatureSession sigsession;
 	private Channel [] childChannels;
 	boolean ready;
 	private ProcessSet processes;
@@ -64,18 +68,22 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 		processes = ProcessSet.buildProcessSet(params.getProperty("processes"),
 				Integer.parseInt(params.getProperty("myrank")));
 		
-		bccInit (processes, params.getProperty("processes"), Integer.parseInt(params.getProperty("myrank")));
+		/* TODO: XML thing is broken. FIXME*/
+		//bccInit (processes, params.getProperty("processes"), Integer.parseInt(params.getProperty("myrank")));
 	}
 	
 
-	public void init(String processfile, int rank) {
+	public void init(String processfile, int rank, String alias, String usercerts) {
 		processes = ProcessSet.buildProcessSet(processfile,rank);
-		bccInit (processes, processfile, rank);
+		bccInit (processes, processfile, rank, alias, usercerts);		
 	}
 
 	
-	private void bccInit (ProcessSet processes, String processfile, int rank)
+	private void bccInit (ProcessSet processes, String processfile, int rank, String alias, String usercerts)
 	{
+		siglayer = new SignatureLayer();
+		sigsession = new SignatureSession(siglayer);
+		sigsession.init(alias, "config/" + alias + ".jks", "123456", usercerts, "123456");
 		ready = true;	
 		sequenceNumbers = new int [processes.getAllProcesses().length];
 		bcbs = new EchoBroadcastSession [processes.getAllProcesses().length];
@@ -86,8 +94,7 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 		{
 			bcls[i] = new EchoBroadcastLayer();
 			bcbs[i] = new EchoBroadcastSession(bcls[i]);
-			bcbs[i].init(processfile, rank);
-			
+			bcbs[i].init(processfile, rank, usercerts, "123456");			
 		}
 	}
 	
@@ -159,10 +166,11 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 				e1.printStackTrace();
 			}
 			
-			
+			SignatureLayer siglayer = new SignatureLayer ();
 			for (int i = 0; i < processes.getAllProcesses().length; i++)
-			{	
-				Layer[] qos = {layerBelowMe, bcls[i]};//, this.getLayer()};
+			{
+				
+				Layer[] qos = {layerBelowMe, siglayer, bcls[i]};//, this.getLayer()};
 										
 				QoS myQoS = null;
 				
@@ -180,9 +188,9 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 					cc.bottom();
 					cc.setSession(sessionBelowMe);
 					cc.up();
+					cc.setSession(sigsession);
+					cc.up();
 					cc.setSession(bcbs[i]);
-					//cc.up();
-					//cc.setSession(this);
 				} catch (AppiaCursorException e) {
 					e.printStackTrace();
 				}

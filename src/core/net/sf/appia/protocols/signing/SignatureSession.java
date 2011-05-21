@@ -153,9 +153,35 @@ public class SignatureSession extends Session implements InitializableSession{
 		}
     }
     
+    public void init (String useralias, String keystorefile, String keystorepass, String trustedcertsfile, String trustedcertspass)
+    {
+    	myAlias = useralias;
+    	keystoreFile = keystorefile;
+    	keystorePass = keystorepass.toCharArray();
+    	trustedCertsFile = trustedcertsfile;
+    	trustedCertsPass = trustedcertspass.toCharArray();
+    	
+    	try{
+            final KeyStore keyStore = KeyStore.getInstance(storeType);
+            keyStore.load(new FileInputStream(keystoreFile), keystorePass);
+            
+            //FIXME for simplicity assuming same password as keystore
+            Key key = keyStore.getKey(myAlias,keystorePass);
+            if(key instanceof PrivateKey){
+            	privKey = (PrivateKey)(key);
+            }
+            
+            trustedStore = KeyStore.getInstance(storeType);
+            trustedStore.load(new FileInputStream(trustedCertsFile), trustedCertsPass);
+    	} catch (Exception e) {
+			e.printStackTrace();
+		}
+    }
+    
     public void handle(Event e) {
-   	
-    	if(e instanceof SendableEvent) { 
+    	
+    	if(e instanceof SendableEvent) {
+        
     		SendableEvent evt = (SendableEvent) e;
     		Message message = evt.getMessage();
     		
@@ -165,7 +191,7 @@ public class SignatureSession extends Session implements InitializableSession{
     			try {
         			String signature = enc.encode(signData(message.toByteArray(), privKey));
         			message.pushString(signature);
-        			e.go();
+        			e.go();        			
     			} catch(Exception ex){
     				System.err.println("Error on signing outgoing message.");
     				ex.printStackTrace();
@@ -180,7 +206,7 @@ public class SignatureSession extends Session implements InitializableSession{
     					Certificate userCert = trustedStore.getCertificate(userAlias);
 						if(verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
     						//System.out.println("Signature of user " + userAlias + " succesfully verified");
-    						message.popString();
+    						message.pushString(signature);
     						e.go();
     					} else {
     						System.err.println("Failure on verifying signature of user " + userAlias + ".");
