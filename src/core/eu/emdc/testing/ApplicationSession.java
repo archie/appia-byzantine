@@ -1,6 +1,7 @@
 package eu.emdc.testing;
 
 
+import java.net.InetSocketAddress;
 import java.util.Date;
 
 import net.sf.appia.core.AppiaEventException;
@@ -13,13 +14,14 @@ import net.sf.appia.core.events.channel.ChannelInit;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
 import net.sf.appia.protocols.echobroadcast.EchoBroadcastEvent;
 import net.sf.appia.test.xml.ecco.MyShell;
+import net.sf.appia.xml.utils.SessionProperties;
 
 public class ApplicationSession extends Session {
 
 
 	private Channel channel;
 	private int localPort;
-	
+	private ProcessSet processes;
     private ApplicationShell shell;
 	
 	public ApplicationSession(Layer layer) {
@@ -43,6 +45,15 @@ public class ApplicationSession extends Session {
 		}
 	}
 	
+	public void init(SessionProperties params) {
+		processes = ProcessSet.buildProcessSet(params.getProperty("processes"),
+				Integer.parseInt(params.getProperty("myrank")));		
+	}
+	
+	public void init(String processfile, int rank) {
+		processes = ProcessSet.buildProcessSet(processfile,rank);		
+	}
+	
 	private void handleChannelEvent(ChannelInit event) {
 		channel = ((ChannelInit) event).getChannel();
 				
@@ -50,7 +61,15 @@ public class ApplicationSession extends Session {
 			event.go();
 		} catch (AppiaEventException e) {
 			e.printStackTrace();
-		}		
+		}
+				 
+        try {
+        	InetSocketAddress temp = (InetSocketAddress) processes.getSelfProcess().getSocketAddress();
+            new RegisterSocketEvent(channel,Direction.DOWN,
+            		this, temp.getPort()).go();
+        } catch (AppiaEventException e1) {
+            e1.printStackTrace();
+        }
 	}
 
 	private void handleEchoBroadcastEvent (EchoBroadcastEvent event)

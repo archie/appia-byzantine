@@ -30,15 +30,14 @@ import eu.emdc.testing.ProcessInitEvent;
 public class EchoBroadcastSession extends Session implements InitializableSession {
 
 	private Channel channel;
-	private InetSocketAddress local;
-	private int localPort;
+	private Channel deliverToChannel = null;
 	private ProcessSet processes;
 	
 	private int N = 0;
 	private int F = 0;
 	
 	// Attach state for each sequence number index.
-	private Map<Integer, StateTuple> stateMap = new HashMap<Integer, StateTuple>(); 
+	// private Map<Integer, StateTuple> stateMap = new HashMap<Integer, StateTuple>(); 
 	
 	// receiver buffers
 	private List<EchoBroadcastEvent> replyBuffer;
@@ -48,11 +47,11 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private int sequenceNumber;
 
 	/* The below holds state information for each broadcast */
-	private class StateTuple {
-		public boolean sentEcho = false;
-		public boolean sentFinal = false;
-		public boolean delivered = false;
-	}
+	
+	public boolean sentEcho = false;
+	public boolean sentFinal = false;
+	public boolean delivered = false;
+	
 	
 	public EchoBroadcastSession(Layer layer) {
 		super(layer);
@@ -69,7 +68,19 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 
 		
 	}
-
+	
+	public void init(String processfile, int rank) {
+		
+		processes = ProcessSet.buildProcessSet(processfile,rank);
+		
+	}
+	
+	/* Manual channel setting */
+	public void setChannels (Channel c, Channel dc)
+	{
+		channel = c;
+		deliverToChannel = dc;
+	}
 	
 	public void handle(Event event) {
 		if (event instanceof ChannelInit) {
@@ -96,7 +107,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		    } catch (AppiaEventException e) {
 		      e.printStackTrace();
 		    }
-		  }
+	 }
 
 	
 	private void handleRSE(RegisterSocketEvent event) {
@@ -107,26 +118,16 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-        local = new InetSocketAddress(event.localHost,event.port);
 	}
 
 	public void handleChannelInit(ChannelInit event) {
 		channel = ((ChannelInit) event).getChannel();
-		
+			
 		 try {
 	            event.go();
 	     } catch (AppiaEventException e) {
 	            e.printStackTrace();
 	     }
-	     
-        try {
-        	InetSocketAddress temp = (InetSocketAddress) processes.getSelfProcess().getSocketAddress();
-            new RegisterSocketEvent(channel,Direction.DOWN,
-            		this, temp.getPort()).go();
-        } catch (AppiaEventException e1) {
-            e1.printStackTrace();
-        }
 	}
 	
 	/** 
@@ -136,8 +137,9 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 				
 		int nextSequenceNumber = ++sequenceNumber;
 		
-		stateMap.put(nextSequenceNumber, new StateTuple ());
+		//stateMap.put(nextSequenceNumber, new StateTuple ());
 		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
+		System.err.println("Seqno: " + nextSequenceNumber);
 		
 		// for all processes		
 		echoEvent.setChannel(channel);
@@ -161,6 +163,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		
 		echoEvent.dest = new AppiaMulticast (null, processes.getAllSockets());
 		
+		System.err.println("Sending on my channel: " + echoEvent.getChannel());
+		
 		try {
 			echoEvent.init();
 			echoEvent.go();			
@@ -175,7 +179,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			echoBroadcast(event);
 			// Temporary: For now, just send to all
 		} else if (event.getDir() == Direction.UP) {
-			pp2pdeliver(event);	
+			pp2pdeliver(event);
 		}
 	}
 	
@@ -199,13 +203,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			return;
 		}
 		
-		if (!stateMap.containsKey(echoEvent.getSequenceNumber()))
-		{
-			StateTuple st = new StateTuple ();
-			st.sentEcho = true;
-			stateMap.put (echoEvent.getSequenceNumber(), st);
-			
-		}
+		sentEcho = true;
 		
 		EchoBroadcastEvent reply = new EchoBroadcastEvent();
 		
@@ -247,6 +245,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		
 		/* TODO: Verify signatures */
 		// add to reply queue for previously sent message
+				
 		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
 		
 		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > (N + F)/2)
@@ -284,8 +283,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 				}
 					
 			}
-			
-//			System.err.println("After echo collection: " + done);
 		}
 		// if #echoes > (N+f)/2 is fulfilled
 		// 	send final
@@ -296,7 +293,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	private void sendFinal(EchoBroadcastEvent echoEvent) {
 		// send final to all 
 		// -- reuse broadcast ?? 
-
 		//send final
 		EchoBroadcastEvent reply = new EchoBroadcastEvent ();
 		reply.setFinal(true);
@@ -330,14 +326,18 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 
 		 */
 		
-		//System.err.println("Received final");
+		//System.err.println("Deliver final");
 		
 		/* need to verify if number of correct signatures is > N+F/2) */
-		if (stateMap.get(echoEvent.getSequenceNumber()).delivered == false)
+		if (delivered == false)
 		{
-			stateMap.get(echoEvent.getSequenceNumber()).delivered = true;
+			delivered = true;
 			try {
-			//	System.err.println("Deliver me :)");		
+				if (deliverToChannel != null) // Ugly hack
+				{
+					echoEvent.setChannel(deliverToChannel);
+					echoEvent.init();
+				}			
 				echoEvent.go();
 			} catch (AppiaEventException e) {
 				// TODO Auto-generated catch block

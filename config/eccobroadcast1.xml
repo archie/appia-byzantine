@@ -3,19 +3,14 @@
 	"xml/appiaxml.dtd">
 <appia>
 	<template name="ecco_t">
-		<session name="tcp_s" sharing="global">
-			<protocol>net.sf.appia.protocols.tcpcomplete.TcpCompleteLayer</protocol>
-		</session>
-		<session name="ecco_s" sharing="private">
-			<protocol>net.sf.appia.protocols.echobroadcast.EchoBroadcastLayer</protocol>
-		</session>
+
     <session name="app_layer" sharing="private">
 			<protocol>eu.emdc.testing.ApplicationLayer</protocol>
 		</session>
 
 	</template>
 	<channel name="ecco_c" template="ecco_t" initialized="yes">
-		<chsession name="ecco_s">
+    <chsession name="bcb_s">
       <parameter name="myrank">0</parameter>
 			<parameter name="processes">config/processes.conf</parameter>
 		</chsession>
