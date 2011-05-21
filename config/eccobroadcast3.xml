@@ -6,25 +6,30 @@
 		<session name="tcp_s" sharing="global">
 			<protocol>net.sf.appia.protocols.tcpcomplete.TcpCompleteLayer</protocol>
 		</session>
+		<session name="sign_s" sharing="private">
+			<protocol>net.sf.appia.protocols.signing.SignatureLayer</protocol>
+		</session>
 		<session name="ecco_s" sharing="private">
 			<protocol>net.sf.appia.protocols.echobroadcast.EchoBroadcastLayer</protocol>
 		</session>
-		<session name="bcb_s" sharing="private">
-			<protocol>net.sf.appia.protocols.byzantineconsistentchannel.ByzantineConsistentChannelLayer</protocol>
-		</session>
-    <session name="app_layer" sharing="private">
+    	<session name="app_layer" sharing="private">
 			<protocol>eu.emdc.testing.ApplicationLayer</protocol>
 		</session>
 
 	</template>
 	<channel name="ecco_c" template="ecco_t" initialized="yes">
 		<chsession name="ecco_s">
-      <parameter name="myrank">2</parameter>
+      		<parameter name="myrank">2</parameter>
 			<parameter name="processes">config/processes.conf</parameter>
 		</chsession>
-    <chsession name="bcb_s">
-      <parameter name="myrank">2</parameter>
-			<parameter name="processes">config/processes.conf</parameter>
+		
+		<chsession name="sign_s">
+			<parameter name="user_alias">user2</parameter>
+        	<parameter name="store_type">JKS</parameter>
+        	<parameter name="keystore_file">config/user2.jks</parameter>
+        	<parameter name="keystore_pass">123456</parameter>
+			<parameter name="trustedcerts_file">config/usercerts.jks</parameter>
+			<parameter name="trustedcerts_pass">123456</parameter>
 		</chsession>
 	</channel>
 </appia>
