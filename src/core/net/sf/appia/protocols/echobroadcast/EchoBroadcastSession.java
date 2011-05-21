@@ -342,9 +342,15 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 			} catch (AppiaEventException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}
+			}			
 		}
 	}
 
+	public void reset ()
+	{
+		sentEcho = false;
+		sentFinal = false;
+		delivered = false;
+	}
 
 }

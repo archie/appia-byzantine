@@ -213,7 +213,7 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 		while (true)
 		{
 			if (ready == true)
-			{
+			{				
 				ready = false;
 				echoEvent.setChannel(childChannels[processes.getSelfRank()]);
 				//bcbs[processes.getSelfRank()].echoBroadcast(echoEvent);
@@ -238,11 +238,9 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	private void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
 		if (event.getDir() == Direction.DOWN) {
 			// something
-			System.err.println("Sending");
 			echoBroadcast(event);
 			// Temporary: For now, just send to all
 		} else if (event.getDir() == Direction.UP) {
-			System.err.println("Received");
 			pp2pdeliver(event);	
 		}
 	}
@@ -250,11 +248,10 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {
 		//if (echoEvent.dest == self) then ready = false.
 		
-		SocketAddress sa = (SocketAddress) echoEvent.dest;
+		SocketAddress sa = (SocketAddress) echoEvent.source;
 		sequenceNumbers[processes.getRank(sa)]++;
 		
-		EchoBroadcastLayer ebl = new EchoBroadcastLayer ();
-		bcbs[processes.getRank(sa)] = new EchoBroadcastSession(ebl);
+		bcbs[processes.getRank(sa)].reset();
 		
 		if (processes.getRank(sa) == processes.getSelfProcess().getProcessNumber())
 		{
