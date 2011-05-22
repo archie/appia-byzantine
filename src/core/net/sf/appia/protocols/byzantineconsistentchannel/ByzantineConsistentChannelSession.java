@@ -45,22 +45,40 @@ import eu.emdc.testing.ProcessInitEvent;
 public class ByzantineConsistentChannelSession<layerType> extends Session implements InitializableSession {
 
 		
+	// From the algo: N[]
 	private int [] sequenceNumbers;
-	private EchoBroadcastLayer [] bcls;
+	
+	// Instances of Byzantine Consistent Broadcast (bcb) sessions
 	private EchoBroadcastSession [] bcbs;
-	private SignatureLayer siglayer;
+	
+	// Instances of Instances of Byzantine Consistent Broadcast (Layers)
+	private EchoBroadcastLayer [] bcls;
+	
+	// Signature session that lives below the bcb instances
 	private SignatureSession sigsession;
+	
+	// Signature layer that lives below the bcb instances
+	private SignatureLayer siglayer;
+	
+	// Channels used for each of the bcb instances.
 	private Channel [] childChannels;
-	boolean ready;
-	private ProcessSet processes;
+
+	// A flag to indicate if the childChannels are ready
 	private boolean childChannelsReady = false;
 	
+	// From the algo: Ready
+	boolean ready;
+	
+	// Set of processes in the system
+	private ProcessSet processes;
+	
+	// The channel that includes this session, which branches
+	// out into the childChannels declared above.
 	Channel channel;
 	
 	
 	public ByzantineConsistentChannelSession(Layer layer) {
 		super(layer);
-		
 	}
 	
 	public void init(SessionProperties params) {
@@ -72,8 +90,11 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 		//bccInit (processes, params.getProperty("processes"), Integer.parseInt(params.getProperty("myrank")));
 	}
 	
-
+	/*
+	 * Initialise processes and signature related parameters.
+	 */
 	public void init(String processfile, int rank, String alias, String usercerts) {
+		
 		processes = ProcessSet.buildProcessSet(processfile,rank);
 		bccInit (processes, processfile, rank, alias, usercerts);		
 	}
@@ -116,6 +137,9 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 		}
 	}
 	
+	/*
+	 * From the ProcessSet abstraction.
+	 */
 	 private void handleProcessInitEvent(ProcessInitEvent event) {
 		 
 		    try {
@@ -136,12 +160,24 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 		}
 	}
 
+
+	/*
+	 * Including a Byzantine Consistent Channel instance in your
+	 * stack will initialise multiple instances of Byzantine Consistent
+	 * Broadcast (bcb) sessions, and a signature layer below them.
+	 * We use sub-channels to de-multiplex events into the appropriate
+	 * bcb session as required.
+	 */
 	public void handleChannelInit(ChannelInit event) {
 		
+		// Only do this once.
 		if (childChannelsReady == false)
 		{
 			channel = ((ChannelInit) event).getChannel();
 	
+			// We need to insert the bcbs and signature layers
+			// between "this" layer and the layer below it (usually a
+			// TcpCompleteLayer).
 			Layer layerBelowMe = null;
 			Session sessionBelowMe = null;
 			
@@ -150,16 +186,15 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 				ChannelCursor cc = channel.getCursor();
 				cc.bottom();
 				
-				/* Find a pointer to yourself */
+				/* Find a pointer to this layer */
 				while (!cc.getSession().equals(this))
 				{
 					cc.up();
 				}		
 		
 				cc.down ();
-				layerBelowMe = cc.getLayer();
-				//Class layerType = layerBelowMe.getClass();
-				sessionBelowMe = cc.getSession();
+				layerBelowMe = cc.getLayer(); // Obtain layer
+				sessionBelowMe = cc.getSession(); // Obtain session
 			
 			} catch (AppiaCursorException e1) {
 				// TODO Auto-generated catch block
@@ -167,10 +202,15 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 			}
 			
 			SignatureLayer siglayer = new SignatureLayer ();
+			
+			/*
+			 * From the algo: Instantiate as many instances of Byzantine
+			 * consistent broadcast as there are processes in the system.
+			 */
 			for (int i = 0; i < processes.getAllProcesses().length; i++)
 			{
 				
-				Layer[] qos = {layerBelowMe, siglayer, bcls[i]};//, this.getLayer()};
+				Layer[] qos = {layerBelowMe, siglayer, bcls[i]};
 										
 				QoS myQoS = null;
 				
@@ -183,18 +223,28 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 				}
 				childChannels[i] = myQoS.createUnboundChannel("Child Channel" + i);
 				
+				// Obtain cursor to child channel
 				ChannelCursor cc = childChannels[i].getCursor();
 				try {
+					// Session below current layer remains bottom-most.
 					cc.bottom();
 					cc.setSession(sessionBelowMe);
+					
+					// ... on top of which we have the signature layer
 					cc.up();
 					cc.setSession(sigsession);
+					
+					// ... on top of which we have the ith bcb instance
 					cc.up();
 					cc.setSession(bcbs[i]);
 				} catch (AppiaCursorException e) {
 					e.printStackTrace();
 				}
 	
+				/*
+				 * Set the child channel for the bcb for tx-path and
+				 * our normal channel for the rx-path.
+				 */
 				bcbs[i].setChannels(childChannels[i], channel);
 				try {
 					childChannels[i].start();
@@ -217,15 +267,17 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	 * Initiate a broadcast of a message
 	 */
 	public void echoBroadcast(EchoBroadcastEvent echoEvent)
-	{
-		//System.err.println("Ready: " + ready);
-		
+	{		
 		/* TODO: Make sure two consequent requests are pipelined */
 		while(true)
 		{
 			if (ready == true)
 			{				
 				ready = false;
+				
+				/*
+				 * Set appropriate child channel before transmitting
+				 */
 				echoEvent.setChannel(childChannels[processes.getSelfRank()]);			
 				try {
 					echoEvent.init ();
@@ -237,6 +289,11 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 				
 				break;
 			}
+			
+			/*
+			 * If the session is already in the middle of a broadcast (ready == false)
+			 * then wait a little before re-trying to transmit.
+			 */
 			try {
 				Thread.sleep(500);
 			} catch (InterruptedException e) {
@@ -248,16 +305,13 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	
 	private void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
 		if (event.getDir() == Direction.DOWN) {
-			// something
 			echoBroadcast(event);
-			// Temporary: For now, just send to all
 		} else if (event.getDir() == Direction.UP) {
 			pp2pdeliver(event);	
 		}
 	}
 	
 	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {
-		//if (echoEvent.dest == self) then ready = false.
 		
 		SocketAddress sa = (SocketAddress) echoEvent.source;
 		sequenceNumbers[processes.getRank(sa)]++;
