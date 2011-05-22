@@ -312,12 +312,20 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	}
 	
 	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {
-		
+
+		/*
+		 * Re-initialise another instance for the pth bcb instance,
+		 * where p is the process ID of the process that initiated
+		 * this broadcast.
+		 */
 		SocketAddress sa = (SocketAddress) echoEvent.source;
 		sequenceNumbers[processes.getRank(sa)]++;
 		
 		bcbs[processes.getRank(sa)].reset();
 		
+		/*
+		 * If we initiated the broadcast, and its done, we're now ready again.
+		 */
 		if (processes.getRank(sa) == processes.getSelfProcess().getProcessNumber())
 		{
 			ready = true;

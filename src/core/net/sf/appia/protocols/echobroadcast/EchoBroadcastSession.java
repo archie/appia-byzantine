@@ -44,28 +44,45 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
      */
     private String storeType = "JKS";
 	
-	// Attach state for each sequence number index.
-	// private Map<Integer, StateTuple> stateMap = new HashMap<Integer, StateTuple>(); 
-	
-	// receiver buffers
+	/*
+	 * A buffer to know what messages we've already
+	 * sent echos to.
+	 */
 	private List<EchoBroadcastEvent> replyBuffer;
 	
-	// initiator buffers
+	/*
+	 * List of echos the sender has collected for each
+	 * broadcast (or sequence number).
+	 */
 	private Map<Integer, List<EchoBroadcastEvent>> replyQueue;
+	
+	/*
+	 * Implemented for safety reasons. One sequence number
+	 * per broadcast.
+	 */
 	private int sequenceNumber;
 
-	/* The below holds state information for each broadcast */
-	
+	/* From the algo: The below holds state information for each broadcast */	
 	public boolean sentEcho = false;
 	public boolean sentFinal = false;
 	public boolean delivered = false;
 	
+	/* From the algo: Sigmas is an array of signatures, and aliases
+	 * is the corresponding alias for the signature.
+	 */
 	private String [] sigmas;
 	private String [] aliases;
 	
+	/*
+	 * Trusted certificates and the password for the signature related
+	 * operations.
+	 */
 	private String trustedCertsFile;
 	private char[] trustedCertsPass;
 	
+	/*
+	 * Value representing bottom.
+	 */
 	final String bottom = "BOTTOM";
 	
 	
@@ -82,7 +99,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		processes = ProcessSet.buildProcessSet(params.getProperty("processes"),
 				Integer.parseInt(params.getProperty("myrank")));
 
-		
+		// FIXME: XML based configuration is currently broken.
 	}
 	
 	public void init(String processfile, int rank, String trustedcertsfile, String trustedcertspass) {
@@ -105,7 +122,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		N = processes.getAllProcesses().length;
 	}
 	
-	/* Manual channel setting */
+	/* Set tx and rx channels, called by Byzantine Consistent Broadcast */
 	public void setChannels (Channel c, Channel dc)
 	{
 		channel = c;
@@ -130,6 +147,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 	}
 	
+	/* Called by ProcessSet abstraction */
 	 private void handleProcessInitEvent(ProcessInitEvent event) {
 		    processes = event.getProcessSet();
 		    try {
@@ -167,22 +185,19 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 				
 		int nextSequenceNumber = ++sequenceNumber;
 						
-		//stateMap.put(nextSequenceNumber, new StateTuple ());
 		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
-		//System.err.println("Seqno: " + nextSequenceNumber);
-		
-		// for all processes		
+				
+				
 		echoEvent.setChannel(channel);
 		echoEvent.setDir(Direction.DOWN);
 		echoEvent.setSourceSession(this);
-		// echoEvent.dest = ??? where is this coming from - a set of processes
-		
-		
 		echoEvent.setEcho(false);
 		echoEvent.setFinal(false);
 		echoEvent.setSequenceNumber(nextSequenceNumber);
-				
+		
+		// This pushes all the required values to the message stack.
 		echoEvent.pushValuesToMessage();
+		
 		/*
 		 * Algorithm:
 		 * 
@@ -192,8 +207,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		 */
 		
 		echoEvent.dest = new AppiaMulticast (null, processes.getAllSockets());
-		
-		//System.err.println("Sending on my channel: " + echoEvent.getChannel());
 		
 		try {
 			echoEvent.init();
@@ -205,9 +218,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	
 	private void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
 		if (event.getDir() == Direction.DOWN) {
-			// something
 			echoBroadcast(event);
-			// Temporary: For now, just send to all
 		} else if (event.getDir() == Direction.UP) {
 			pp2pdeliver(event);
 		}
@@ -221,6 +232,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		String signature = echoEvent.getMessage().popString();
 		String alias = echoEvent.getMessage().popString();
 		
+		// Now populate the required fields in the message.
 		echoEvent.popValuesFromMessage();
 
 		if (echoEvent.isEcho()) {
@@ -244,16 +256,18 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		
 		EchoBroadcastEvent reply = new EchoBroadcastEvent();
 		
-		// Need to sign the below.
+		// Need to sign the below. This is done by the signature
+		// layer below us.
 		reply.setEcho(true);
 		reply.setSequenceNumber(echoEvent.getSequenceNumber());
 		reply.dest = echoEvent.source;
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
 		reply.setDir(Direction.DOWN);
-		reply.setText(echoEvent.getText()); // Not sure why this is needed but lolz - Lalith
+		reply.setText(echoEvent.getText());
 		
 		reply.pushValuesToMessage();
+		
 		// try sending reply to source
 		try {
 			reply.init();
@@ -280,22 +294,24 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 
 	private void collectEchoReply(EchoBroadcastEvent echoEvent, String alias, String signature) {
 		
-		/* TODO: Verify signatures */
-		// add to reply queue for previously sent message
 				
 		SocketAddress sa = (SocketAddress) echoEvent.source;
 		
-		//System.err.println("GotSometingfrom PID: " + processes.getRank(sa));
 		aliases[processes.getRank(sa)] = alias;
 		sigmas[processes.getRank(sa)] = signature;
-				
+		
+		// Add to reply queue.
 		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
 		
+		// From algo: When #echos > (N + F)/2, and the echos are verified, then continue
+		// Note: The verification is done by the signature layer below. Msgs who's verification has
+		// failed won't make it till here.
 		if (replyQueue.get(echoEvent.getSequenceNumber()).size() >= Math.ceil((N + F)/2.0) && sentFinal == false)
-		{
-			
+		{			
 			boolean done = false;
 			List<String> alreadyCovered = new ArrayList<String> ();
+			
+			/* See if we have more than (N + F)/2 occurrences for the same message. */
 			for (EchoBroadcastEvent ebe1 : replyQueue.get (echoEvent.getSequenceNumber())) {
 				int num = 0;
 				
@@ -328,16 +344,9 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 					
 			}
 		}
-		// if #echoes > (N+f)/2 is fulfilled
-		// 	send final
-		// else 
-		// 	wait
 	}
 	
 	private void sendFinal(EchoBroadcastEvent echoEvent) {
-		// send final to all 
-		// -- reuse broadcast ?? 
-		//send final
 		sentFinal = true;
 		EchoBroadcastEvent reply = new EchoBroadcastEvent ();
 		reply.setFinal(true);
@@ -349,7 +358,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		reply.setText(echoEvent.getText());
 		
 		/* Add signatures here */
-		
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
 		{			
 			
@@ -363,6 +371,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 		
 		reply.pushValuesToMessage();
+		
 		// try sending reply to source
 		try {
 			reply.init();
@@ -374,18 +383,12 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	}
 	
 	private void deliverFinal(EchoBroadcastEvent echoEvent) {
-		/*
-		 * 
-if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
-	and delivered = FALSE do
-		delivered := TRUE;
-		trigger bcb, Deliver | s, m ;
 
-		 */
-		
 		//System.err.println("Delivering final");
 		String sigma, alias;
 		int verified = 0;
+		
+		// Unpack signatures and aliases.
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
 		{
 			
@@ -394,6 +397,7 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 			
 		}
 		
+		// Verify all the signatures and maintain a count of them.
 		Message echoMessage = getEchoMessage(echoEvent);
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
 		{
@@ -412,11 +416,13 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 			}
 		}
 
+		// If we have at least (N + F)/2 verified messages of content 'm', then deliver m.
 		if (delivered == false && verified >= Math.ceil((N+F)/2.0))
 		{
 			delivered = true;
 			try {
-				if (deliverToChannel != null) // Ugly hack
+				// Check to see if we have different tx/rx paths.
+				if (deliverToChannel != null)
 				{
 					echoEvent.setChannel(deliverToChannel);
 					echoEvent.init();
@@ -444,6 +450,7 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 		return clonedMsg;
 	}
 
+	/* Reinitialises the session, called by ByzantineConsistentChannel */
 	public void reset ()
 	{
 		sentEcho = false;
