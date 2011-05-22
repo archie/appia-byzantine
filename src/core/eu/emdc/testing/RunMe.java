@@ -1,13 +1,5 @@
 package eu.emdc.testing;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-
-import org.xml.sax.SAXException;
-
 import net.sf.appia.core.Appia;
 import net.sf.appia.core.AppiaCursorException;
 import net.sf.appia.core.AppiaDuplicatedSessionsException;
@@ -18,19 +10,10 @@ import net.sf.appia.core.Layer;
 import net.sf.appia.core.QoS;
 import net.sf.appia.protocols.byzantineconsistentchannel.ByzantineConsistentChannelLayer;
 import net.sf.appia.protocols.byzantineconsistentchannel.ByzantineConsistentChannelSession;
-import net.sf.appia.protocols.echobroadcast.EchoBroadcastLayer;
-import net.sf.appia.protocols.echobroadcast.EchoBroadcastSession;
-import net.sf.appia.protocols.signing.SignatureLayer;
-import net.sf.appia.protocols.signing.SignatureSession;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteLayer;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteSession;
-import net.sf.appia.test.xml.ecco.EccoLayer;
-import net.sf.appia.test.xml.ecco.EccoSession;
-import net.sf.appia.xml.AppiaXML;
 
 public class RunMe {
-
-private static final int NUMBER_OF_ARGS = 3;
     
     private RunMe() {}
     

@@ -65,24 +65,19 @@ public class SignatureSession extends Session implements InitializableSession{
      * Ex: "JKS"
      */
     private String storeType = "JKS";
-    
     /*
      * Name of the file were the private key is stored.
      */
     private String keystoreFile=null;
-    
     /*
      * Passphrase to access the file where the private key is stored.
      */
     private char[] keystorePass=null;
-    
     /*
-     * Name of the file were the private key is stored.
+     * Name of the file were the certificates are stored.
      */
     private String trustedCertsFile=null;
-    
-    /*
-     * Passphrase to access the file where the private key is stored.
+    /* Passphrase to access the file where the trusted certificates are stored.
      */
     private char[] trustedCertsPass=null;
 	
@@ -90,7 +85,6 @@ public class SignatureSession extends Session implements InitializableSession{
     private String myAlias;
     
     private KeyStore trustedStore;
-    
     private PrivateKey privKey;
     
     private BASE64Encoder enc;
@@ -199,20 +193,13 @@ public class SignatureSession extends Session implements InitializableSession{
     		} else {
     			String signature = message.popString();
     			String userAlias = message.popString();
-    			message.pushString(userAlias); //FIXME: peek doest not work :(
     			
     			try{
-    				if(trustedStore.containsAlias(userAlias)){
-    					Certificate userCert = trustedStore.getCertificate(userAlias);
-						if(verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
-    						//System.out.println("Signature of user " + userAlias + " succesfully verified");
-    						message.pushString(signature);
-    						e.go();
-    					} else {
-    						System.err.println("Failure on verifying signature of user " + userAlias + ".");
-    					}
-    				} else {
-						System.err.println("Received message from untrusted user: " + userAlias + ".");
+    				if(verifySignature(message, userAlias, signature, trustedStore)){
+    					//FIXME
+    					message.pushString(userAlias);
+    					message.pushString(signature);
+						e.go();
     				}
     			} catch(Exception ex){
     				System.err.println("Error on verifying signature of ingoing message.");
@@ -235,6 +222,27 @@ public class SignatureSession extends Session implements InitializableSession{
 		signer.initVerify(key);
 		signer.update(data);
 		return (signer.verify(sig));
-
+	}
+	
+	public static boolean verifySignature(Message message, String userAlias, String signature, KeyStore trustedStore) throws Exception
+	{
+		boolean verified = false;
+		
+		BASE64Decoder dec = new BASE64Decoder();
+		if(trustedStore.containsAlias(userAlias)){
+			Certificate userCert = trustedStore.getCertificate(userAlias);
+			message.pushString(userAlias);
+			if(verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
+				//System.out.println("Signature of user " + userAlias + " succesfully verified");
+				verified = true;
+			} else {
+				System.err.println("Failure on verifying signature of user " + userAlias + ".");
+			}
+			message.popString();
+		} else {
+			System.err.println("Message from untrusted user: " + userAlias + ".");
+		}
+		
+		return verified;
 	}
 }

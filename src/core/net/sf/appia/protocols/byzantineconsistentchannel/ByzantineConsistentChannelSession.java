@@ -218,7 +218,9 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	 */
 	public void echoBroadcast(EchoBroadcastEvent echoEvent)
 	{
-		System.err.println("Ready: " + ready);
+		//System.err.println("Ready: " + ready);
+		
+		/* TODO: Make sure two consequent requests are pipelined */
 		if (ready == true)
 		{				
 			ready = false;
