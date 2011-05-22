@@ -224,15 +224,14 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 		if (ready == true)
 		{				
 			ready = false;
-			echoEvent.setChannel(childChannels[processes.getSelfRank()]);
-				//bcbs[processes.getSelfRank()].echoBroadcast(echoEvent);
-				try {
-					echoEvent.init ();
-					echoEvent.go ();
-				} catch (AppiaEventException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}	
+			echoEvent.setChannel(childChannels[processes.getSelfRank()]);			
+			try {
+				echoEvent.init ();
+				echoEvent.go ();
+			} catch (AppiaEventException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
 		}		
 	}
 	
