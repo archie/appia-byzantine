@@ -104,7 +104,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 
 		aliases = new String [processes.getAllProcesses().length];
-		sigmas = new String [processes.getAllProcesses().length];	
+		sigmas = new String [processes.getAllProcesses().length];
+		N = processes.getAllProcesses().length;
 	}
 	
 	/* Manual channel setting */
@@ -168,9 +169,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	public void echoBroadcast(EchoBroadcastEvent echoEvent) {
 				
 		int nextSequenceNumber = ++sequenceNumber;
-				
-		N = processes.getAllProcesses().length;
-		
+						
 		//stateMap.put(nextSequenceNumber, new StateTuple ());
 		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
 		System.err.println("Seqno: " + nextSequenceNumber);
@@ -289,7 +288,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 				
 		SocketAddress sa = (SocketAddress) echoEvent.source;
 		
-		System.err.println("GotSometingfrom PID: " + processes.getRank(sa));
+		//System.err.println("GotSometingfrom PID: " + processes.getRank(sa));
 		aliases[processes.getRank(sa)] = alias;
 		sigmas[processes.getRank(sa)] = signature;
 				
@@ -387,6 +386,7 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 
 		 */
 		
+		//System.err.println("Delivering final");
 		String sigma, alias;
 		int verified = 0;
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
@@ -423,7 +423,7 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 		echoEvent.getMessage().popBoolean();
 		echoEvent.getMessage().popInt();
 		
-		if (delivered == false && verified > Math.ceil((N+F)/2.0))
+		if (delivered == false && verified >= Math.ceil((N+F)/2.0))
 		{
 			delivered = true;
 			try {
@@ -447,7 +447,7 @@ if # {p ∈ Π | Σ[p] = ⊥ ∧ verifysig(p, bcb p E CHO m, Σ[p])} >
 			Certificate userCert = trustedStore.getCertificate(userAlias);
 			message.pushString(userAlias);
 			if(SignatureSession.verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
-				System.out.println("Deliver Sign blah : Signature of user " + userAlias + " succesfully verified");
+				//System.out.println("Deliver Sign blah : Signature of user " + userAlias + " succesfully verified");
 				message.popString();
 				return true;
 			} else {

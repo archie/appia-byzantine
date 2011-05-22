@@ -216,14 +216,13 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	/** 
 	 * Initiate a broadcast of a message
 	 */
-	public void echoBroadcast(EchoBroadcastEvent echoEvent) {
-		
-		while (true)
-		{
-			if (ready == true)
-			{				
-				ready = false;
-				echoEvent.setChannel(childChannels[processes.getSelfRank()]);
+	public void echoBroadcast(EchoBroadcastEvent echoEvent)
+	{
+		System.err.println("Ready: " + ready);
+		if (ready == true)
+		{				
+			ready = false;
+			echoEvent.setChannel(childChannels[processes.getSelfRank()]);
 				//bcbs[processes.getSelfRank()].echoBroadcast(echoEvent);
 				try {
 					echoEvent.init ();
@@ -231,16 +230,8 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 				} catch (AppiaEventException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
-				break;
-			}
-			try {
-				Thread.sleep(5000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+				}	
+		}		
 	}
 	
 	private void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
