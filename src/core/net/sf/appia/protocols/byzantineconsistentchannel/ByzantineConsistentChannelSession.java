@@ -75,7 +75,7 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 	// The channel that includes this session, which branches
 	// out into the childChannels declared above.
 	Channel channel;
-	
+		
 	
 	public ByzantineConsistentChannelSession(Layer layer) {
 		super(layer);

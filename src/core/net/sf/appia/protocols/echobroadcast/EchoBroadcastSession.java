@@ -36,7 +36,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
     private KeyStore trustedStore;
     	
 	private int N = 0;
-	private int F = 0;
+	private int F = 1;
 	
     /*
      * KeyStore, format  used to store the keys.
@@ -119,7 +119,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 
 		aliases = new String [processes.getAllProcesses().length];
 		sigmas = new String [processes.getAllProcesses().length];
-		N = processes.getAllProcesses().length;
+		N = processes.getAllProcesses().length;		
 	}
 	
 	/* Set tx and rx channels, called by Byzantine Consistent Broadcast */
@@ -264,7 +264,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
 		reply.setDir(Direction.DOWN);
-		reply.setText(echoEvent.getText());
+		reply.setText(echoEvent.getText());		
 		
 		reply.pushValuesToMessage();
 		
@@ -306,7 +306,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		// From algo: When #echos > (N + F)/2, and the echos are verified, then continue
 		// Note: The verification is done by the signature layer below. Msgs who's verification has
 		// failed won't make it till here.
-		if (replyQueue.get(echoEvent.getSequenceNumber()).size() >= Math.ceil((N + F)/2.0) && sentFinal == false)
+		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > Math.floor((N + F)/2.0) && sentFinal == false)
 		{			
 			boolean done = false;
 			List<String> alreadyCovered = new ArrayList<String> ();
@@ -327,7 +327,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 						if (ebe1.getText().equals(ebe2.getText()))
 						{
 							num++;
-							if (num >= Math.ceil((N + F)/2.0))
+							if (num > Math.floor((N + F)/2.0))
 							{
 								done = true;
 								break;
@@ -335,7 +335,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 						}
 					}
 				}
-				
+
 				if (done == true)
 				{
 					sendFinal(echoEvent);
@@ -354,8 +354,8 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		reply.dest =  new AppiaMulticast (null, processes.getAllSockets());
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
-		reply.setDir(Direction.DOWN);
-		reply.setText(echoEvent.getText());
+		reply.setDir(Direction.DOWN);		
+		reply.setText(echoEvent.getText());	
 		
 		/* Add signatures here */
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
@@ -384,7 +384,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	
 	private void deliverFinal(EchoBroadcastEvent echoEvent) {
 
-		//System.err.println("Delivering final");
+		System.err.println("Delivering final");
 		String sigma, alias;
 		int verified = 0;
 		
@@ -417,7 +417,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 
 		// If we have at least (N + F)/2 verified messages of content 'm', then deliver m.
-		if (delivered == false && verified >= Math.ceil((N+F)/2.0))
+		if (delivered == false && verified > Math.floor((N+F)/2.0))
 		{
 			delivered = true;
 			try {

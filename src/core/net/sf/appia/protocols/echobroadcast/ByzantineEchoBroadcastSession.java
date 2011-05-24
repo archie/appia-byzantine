@@ -355,7 +355,10 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
 		reply.setDir(Direction.DOWN);
-		reply.setText(echoEvent.getText());
+				
+		/* Byzantine behaviour 1 */
+		// reply.setText(echoEvent.getText());
+		reply.setText("fake message");
 		
 		/* Add signatures here */
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
