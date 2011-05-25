@@ -383,8 +383,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	}
 	
 	private void deliverFinal(EchoBroadcastEvent echoEvent) {
-
-		System.err.println("Delivering final");
+		
 		String sigma, alias;
 		int verified = 0;
 		
