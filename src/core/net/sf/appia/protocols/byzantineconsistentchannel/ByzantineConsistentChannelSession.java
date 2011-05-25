@@ -331,7 +331,9 @@ public class ByzantineConsistentChannelSession<layerType> extends Session implem
 			ready = true;
 		}
 		
-		try {
+		echoEvent.setText(echoEvent.getText() + " label:"+ (sequenceNumbers[processes.getRank(sa)] - 1));
+		
+		try {			
 			echoEvent.go ();
 		} catch (AppiaEventException e) {
 			// TODO Auto-generated catch block
