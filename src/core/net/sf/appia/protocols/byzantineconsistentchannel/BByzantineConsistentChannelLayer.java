@@ -30,7 +30,7 @@ public class BByzantineConsistentChannelLayer extends Layer {
 	}
 
 	public Session createSession() {
-		return new ByzantineConsistentChannelSession(this);
+		return new BByzantineConsistentChannelSession(this);
 	}
 
 }

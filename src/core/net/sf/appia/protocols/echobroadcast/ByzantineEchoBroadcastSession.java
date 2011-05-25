@@ -23,6 +23,7 @@ import net.sf.appia.xml.interfaces.InitializableSession;
 import net.sf.appia.xml.utils.SessionProperties;
 import eu.emdc.testing.ProcessInitEvent;
 import eu.emdc.testing.ProcessSet;
+import eu.emdc.testing.SampleProcess;
 
 /**
  * Echo Broadcast Layer
@@ -36,7 +37,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
     private KeyStore trustedStore;
     	
 	private int N = 0;
-	private int F = 0;
+	private int F = 1;
 	
     /*
      * KeyStore, format  used to store the keys.
@@ -85,6 +86,10 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 	 */
 	final String bottom = "BOTTOM";
 	
+	/*
+	 * Used to activate various testcases. See documentation for details. 
+	 */
+	private String testCase = null;
 	
 	public ByzantineEchoBroadcastSession(Layer layer) {
 		super(layer);
@@ -102,8 +107,8 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 		// FIXME: XML based configuration is currently broken.
 	}
 	
-	public void init(String processfile, int rank, String trustedcertsfile, String trustedcertspass) {
-		
+	public void init(String processfile, int rank, String trustedcertsfile, String trustedcertspass, String test) {
+		this.testCase = test;
 		processes = ProcessSet.buildProcessSet(processfile,rank);
 		
     	trustedCertsFile = trustedcertsfile;
@@ -119,7 +124,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 
 		aliases = new String [processes.getAllProcesses().length];
 		sigmas = new String [processes.getAllProcesses().length];
-		N = processes.getAllProcesses().length;
+		N = processes.getAllProcesses().length;		
 	}
 	
 	/* Set tx and rx channels, called by Byzantine Consistent Broadcast */
@@ -181,38 +186,56 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 	/** 
 	 * Initiate a broadcast of a message
 	 */
-	public void echoBroadcast(EchoBroadcastEvent echoEvent) {
+	public void echoBroadcast(EchoBroadcastEvent originalEchoEvent) {
 				
 		int nextSequenceNumber = ++sequenceNumber;
 						
 		replyQueue.put(nextSequenceNumber, new ArrayList<EchoBroadcastEvent>());
 				
-				
-		echoEvent.setChannel(channel);
-		echoEvent.setDir(Direction.DOWN);
-		echoEvent.setSourceSession(this);
-		echoEvent.setEcho(false);
-		echoEvent.setFinal(false);
-		echoEvent.setSequenceNumber(nextSequenceNumber);
-		
-		// This pushes all the required values to the message stack.
-		echoEvent.pushValuesToMessage();
-		
-		/*
-		 * Algorithm:
-		 * 
-		 * upon event < bcb, Broadcast | m > do
-		 * 		for all processes do
-		 * 			trigger < al, Send | q, [Send m]>;
-		 */
-		
-		echoEvent.dest = new AppiaMulticast (null, processes.getAllSockets());
-		
-		try {
-			echoEvent.init();
-			echoEvent.go();			
-		} catch (AppiaEventException eventerror) {
-			eventerror.printStackTrace();
+		for (SampleProcess p : processes.getAllProcesses()) {			
+			
+			EchoBroadcastEvent echoEvent = null;
+			try {
+				echoEvent = (EchoBroadcastEvent) originalEchoEvent.cloneEvent();
+			} catch (CloneNotSupportedException e) {				
+				e.printStackTrace();
+			}
+
+			echoEvent.setChannel(channel);
+			echoEvent.setDir(Direction.DOWN);
+			echoEvent.setSourceSession(this);
+			echoEvent.setEcho(false);
+			echoEvent.setFinal(false);
+			echoEvent.setSequenceNumber(nextSequenceNumber);
+			
+			/*
+			 * Test Case 3: A byzantine coordinator will send a 
+			 * different message to all nodes in the set. Will be detected
+			 * in the Final phase by all correct processes.  
+			 */
+			if (testCase.equalsIgnoreCase("test3")) {
+				echoEvent.setText(String.valueOf(p.getProcessNumber()));
+			}
+
+			// This pushes all the required values to the message stack.
+			echoEvent.pushValuesToMessage();
+
+			/*
+			 * Algorithm:
+			 * 
+			 * upon event < bcb, Broadcast | m > do
+			 * 		for all processes do
+			 * 			trigger < al, Send | q, [Send m]>;
+			 */
+
+			echoEvent.dest = p.getSocketAddress();
+			
+			try {
+				echoEvent.init();
+				echoEvent.go();			
+			} catch (AppiaEventException eventerror) {
+				eventerror.printStackTrace();
+			}
 		}
 	}
 	
@@ -264,7 +287,18 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
 		reply.setDir(Direction.DOWN);
-		reply.setText(echoEvent.getText());
+		
+		/*
+		 * Test Case 1: Byzantine node receives a correct message
+		 * but tries to modify its content, basically corrupting the message.
+		 * This should be detected when comparing the final messages by all
+		 * correct processes. 
+		 */
+		if (testCase.equalsIgnoreCase("test1")) {
+			reply.setText("fake message");
+		} else {
+			reply.setText(echoEvent.getText());		
+		}
 		
 		reply.pushValuesToMessage();
 		
@@ -306,7 +340,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 		// From algo: When #echos > (N + F)/2, and the echos are verified, then continue
 		// Note: The verification is done by the signature layer below. Msgs who's verification has
 		// failed won't make it till here.
-		if (replyQueue.get(echoEvent.getSequenceNumber()).size() >= Math.ceil((N + F)/2.0) && sentFinal == false)
+		if (replyQueue.get(echoEvent.getSequenceNumber()).size() > Math.floor((N + F)/2.0) && sentFinal == false)
 		{			
 			boolean done = false;
 			List<String> alreadyCovered = new ArrayList<String> ();
@@ -327,7 +361,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 						if (ebe1.getText().equals(ebe2.getText()))
 						{
 							num++;
-							if (num >= Math.ceil((N + F)/2.0))
+							if (num > Math.floor((N + F)/2.0))
 							{
 								done = true;
 								break;
@@ -335,7 +369,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 						}
 					}
 				}
-				
+
 				if (done == true)
 				{
 					sendFinal(echoEvent);
@@ -354,12 +388,17 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 		reply.dest =  new AppiaMulticast (null, processes.getAllSockets());
 		reply.setSourceSession(this);
 		reply.setChannel(channel);
-		reply.setDir(Direction.DOWN);
-				
-		/* Byzantine behaviour 1 */
-		// reply.setText(echoEvent.getText());
-		reply.setText("fake message");
+		reply.setDir(Direction.DOWN);	
 		
+		/*
+		 * Test Case 2: Modifying the final message. Correct nodes
+		 * should detect this by comparing the signatures attached. 
+		 */
+		if (testCase.equalsIgnoreCase("test2")) {
+			reply.setText("fake message");
+		} else {
+			reply.setText(echoEvent.getText());	
+		}
 		/* Add signatures here */
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
 		{			
@@ -387,7 +426,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 	
 	private void deliverFinal(EchoBroadcastEvent echoEvent) {
 
-		//System.err.println("Delivering final");
+		System.err.println("Delivering final");
 		String sigma, alias;
 		int verified = 0;
 		
@@ -420,7 +459,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 		}
 
 		// If we have at least (N + F)/2 verified messages of content 'm', then deliver m.
-		if (delivered == false && verified >= Math.ceil((N+F)/2.0))
+		if (delivered == false && verified > Math.floor((N+F)/2.0))
 		{
 			delivered = true;
 			try {

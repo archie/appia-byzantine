@@ -44,7 +44,7 @@ import eu.emdc.testing.ProcessInitEvent;
  * @author EMDC
  * @param <layerType>
  */
-public class BByzantineConsistentChannelSession<layerType> extends Session implements InitializableSession {
+public class BByzantineConsistentChannelSession extends Session implements InitializableSession {
 
 		
 	// From the algo: N[]
@@ -92,17 +92,21 @@ public class BByzantineConsistentChannelSession<layerType> extends Session imple
 		//bccInit (processes, params.getProperty("processes"), Integer.parseInt(params.getProperty("myrank")));
 	}
 	
-	/*
+	/**
 	 * Initialise processes and signature related parameters.
 	 */
 	public void init(String processfile, int rank, String alias, String usercerts) {
-		
+		init(processfile, rank, alias, usercerts);
+	}
+	
+	public void init(String processfile, int rank, String alias,
+			String usercerts, String testCase) {
 		processes = ProcessSet.buildProcessSet(processfile,rank);
-		bccInit (processes, processfile, rank, alias, usercerts);		
+		bccInit (processes, processfile, rank, alias, usercerts, testCase);
 	}
 
 	
-	private void bccInit (ProcessSet processes, String processfile, int rank, String alias, String usercerts)
+	private void bccInit (ProcessSet processes, String processfile, int rank, String alias, String usercerts, String testCase)
 	{
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
@@ -117,7 +121,7 @@ public class BByzantineConsistentChannelSession<layerType> extends Session imple
 		{
 			bcls[i] = new ByzantineEchoBroadcastLayer();
 			bcbs[i] = new ByzantineEchoBroadcastSession(bcls[i]);
-			bcbs[i].init(processfile, rank, usercerts, "123456");			
+			bcbs[i].init(processfile, rank, usercerts, "123456", testCase);
 		}
 	}
 	
@@ -335,8 +339,7 @@ public class BByzantineConsistentChannelSession<layerType> extends Session imple
 		
 		try {
 			echoEvent.go ();
-		} catch (AppiaEventException e) {
-			// TODO Auto-generated catch block
+		} catch (AppiaEventException e) {	
 			e.printStackTrace();
 		}
 

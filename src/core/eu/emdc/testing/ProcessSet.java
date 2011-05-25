@@ -48,8 +48,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import sun.org.mozilla.javascript.ObjArray;
-
 /**
  * A set of sample processes.
  * 
