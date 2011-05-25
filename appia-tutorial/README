@@ -1,0 +1,50 @@
+
+Last Updated: 14/Mar/2011
+
+Hands-On code of the book Introduction to Reliable Distributed 
+Programming by Christian Cachin, Rachid Guerraoui and Luis Rodrigues.
+
+For more details see:
+	http://www.distributedprogramming.net
+
+__________________________________________________________________________
+
+CONTENTS:
+
+	(1) REQUIREMENTS
+	(2) LICENSE
+	(3) COMPILE AND RUN
+
+__________________________________________________________________________
+
+(1) REQUIREMENTS
+__________________________________________________________________________
+
+The Hands-On code and Appia are written in Java thus they require a java 
+virtual machine installed in your computer. Currently they require the 
+JDK version 5.0 or higher. Installing/Upgrading java is beyond the scope 
+of this document. See http://www.oracle.com/technetwork/java/ for more
+info about this subject.
+
+__________________________________________________________________________
+
+(2) LICENSE
+__________________________________________________________________________
+
+The Hands-On code is distributed under the Lesser Gnu Public License (LGPL). 
+More details can be found in the COPYING file and in the web page:
+http://www.fsf.org/licensing/licenses/lgpl.html
+
+__________________________________________________________________________
+
+(3) COMPILE AND RUN
+__________________________________________________________________________
+
+To compile the sources, you can use Apache Ant or a Java editor.
+This distribution includes an example application that initializes each
+protocol stack and includes a simple command line shell to send/receive
+messages using the configured protocols.
+This application can be started using the run.sh script.
+On a linux shell, just run ./run.sh to see the usage options.
+When the application is started, just type "help" to see the available
+commands.

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_irdp" default="compile.module.irdp">
+  <dirname property="module.irdp.basedir" file="${ant.file.module_irdp}"/>
+  
+  <property name="module.jdk.home.irdp" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.irdp" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.irdp" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.irdp" value="${compiler.args}"/>
+  
+  <property name="irdp.output.dir" value="${module.irdp.basedir}/bin/production/Irdp"/>
+  <property name="irdp.testoutput.dir" value="${module.irdp.basedir}/bin/test/Irdp"/>
+  
+  <path id="irdp.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="irdp.module.production.classpath">
+    <path refid="${module.jdk.classpath.irdp}"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  <path id="irdp.runtime.production.module.classpath">
+    <pathelement location="${irdp.output.dir}"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  <path id="irdp.module.classpath">
+    <path refid="${module.jdk.classpath.irdp}"/>
+    <pathelement location="${irdp.output.dir}"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  <path id="irdp.runtime.module.classpath">
+    <pathelement location="${irdp.testoutput.dir}"/>
+    <pathelement location="${irdp.output.dir}"/>
+    <path refid="library.lib.classpath"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.irdp">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.irdp">
+    <patternset refid="excluded.from.module.irdp"/>
+  </patternset>
+  
+  <path id="irdp.module.sourcepath">
+    <dirset dir="${module.irdp.basedir}">
+      <include name="src"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.irdp" depends="compile.module.irdp.production,compile.module.irdp.tests" description="Compile module Irdp"/>
+  
+  <target name="compile.module.irdp.production" description="Compile module Irdp; production classes">
+    <mkdir dir="${irdp.output.dir}"/>
+    <javac destdir="${irdp.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.irdp}/javac">
+      <compilerarg line="${compiler.args.irdp}"/>
+      <bootclasspath refid="irdp.module.bootclasspath"/>
+      <classpath refid="irdp.module.production.classpath"/>
+      <src refid="irdp.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.irdp"/>
+    </javac>
+    
+    <copy todir="${irdp.output.dir}">
+      <fileset dir="${module.irdp.basedir}/src">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.irdp.tests" depends="compile.module.irdp.production" description="compile module Irdp; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.irdp" description="cleanup module">
+    <delete dir="${irdp.output.dir}"/>
+    <delete dir="${irdp.testoutput.dir}"/>
+  </target>
+</project>

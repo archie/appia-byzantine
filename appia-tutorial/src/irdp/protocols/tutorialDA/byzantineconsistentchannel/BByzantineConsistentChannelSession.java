@@ -1,4 +1,12 @@
-package net.sf.appia.protocols.byzantineconsistentchannel;
+package irdp.protocols.tutorialDA.byzantineconsistentchannel;
+
+import irdp.protocols.tutorialDA.echobroadcast.ByzantineEchoBroadcastLayer;
+import irdp.protocols.tutorialDA.echobroadcast.ByzantineEchoBroadcastSession;
+import irdp.protocols.tutorialDA.events.EchoBroadcastEvent;
+import irdp.protocols.tutorialDA.events.ProcessInitEvent;
+import irdp.protocols.tutorialDA.signing.SignatureLayer;
+import irdp.protocols.tutorialDA.signing.SignatureSession;
+import irdp.protocols.tutorialDA.utils.ProcessSet;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -23,21 +31,11 @@ import net.sf.appia.core.Session;
 import net.sf.appia.core.events.AppiaMulticast;
 import net.sf.appia.core.events.channel.ChannelInit;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
-import net.sf.appia.protocols.echobroadcast.ByzantineEchoBroadcastLayer;
-import net.sf.appia.protocols.echobroadcast.ByzantineEchoBroadcastSession;
-import net.sf.appia.protocols.echobroadcast.EchoBroadcastEvent;
-import net.sf.appia.protocols.echobroadcast.EchoBroadcastLayer;
-import net.sf.appia.protocols.echobroadcast.EchoBroadcastSession;
-import net.sf.appia.protocols.signing.SignatureLayer;
-import net.sf.appia.protocols.signing.SignatureSession;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteLayer;
 import net.sf.appia.protocols.tcpcomplete.TcpCompleteSession;
 import net.sf.appia.xml.AppiaXML;
 import net.sf.appia.xml.interfaces.InitializableSession;
 import net.sf.appia.xml.utils.SessionProperties;
-import eu.emdc.testing.ApplicationLayer;
-import eu.emdc.testing.ProcessSet;
-import eu.emdc.testing.ProcessInitEvent;
 
 /**
  * Echo Broadcast Layer
@@ -110,7 +108,7 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 	{
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
-		sigsession.init(alias, "config/" + alias + ".jks", "123456", usercerts, "123456");
+		sigsession.init(alias, alias, "123456", usercerts, "123456");
 		ready = true;	
 		sequenceNumbers = new int [processes.getAllProcesses().length];
 		bcbs = new ByzantineEchoBroadcastSession [processes.getAllProcesses().length];
@@ -121,10 +119,13 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 		{
 			bcls[i] = new ByzantineEchoBroadcastLayer();
 			bcbs[i] = new ByzantineEchoBroadcastSession(bcls[i]);
-			bcbs[i].init(processfile, rank, usercerts, "123456", testCase);
+			bcbs[i].init(processes, rank, usercerts, "123456");
 		}
 	}
 	
+	/** 
+	 * Parse incoming event and handle it accordingly.
+	 */
 	public void handle(Event event) {
 		if (event instanceof ChannelInit) {
 			handleChannelInit((ChannelInit)event);
@@ -146,28 +147,24 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 	/*
 	 * From the ProcessSet abstraction.
 	 */
-	 private void handleProcessInitEvent(ProcessInitEvent event) {
-		 
-		    try {
-		      event.go();
-		    } catch (AppiaEventException e) {
-		      e.printStackTrace();
-		    }
-	 }
-
-	
-	private void handleRSE(RegisterSocketEvent event) {
-		// TODO Auto-generated method stub
+	private void handleProcessInitEvent(ProcessInitEvent event) {
 		try {
 			event.go();
 		} catch (AppiaEventException e) {
-			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private void handleRSE(RegisterSocketEvent event) {
+		try {
+			event.go();
+		} catch (AppiaEventException e) {
 			e.printStackTrace();
 		}
 	}
 
 
-	/*
+	/**
 	 * Including a Byzantine Consistent Channel instance in your
 	 * stack will initialise multiple instances of Byzantine Consistent
 	 * Broadcast (bcb) sessions, and a signature layer below them.
@@ -202,8 +199,7 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 				layerBelowMe = cc.getLayer(); // Obtain layer
 				sessionBelowMe = cc.getSession(); // Obtain session
 			
-			} catch (AppiaCursorException e1) {
-				// TODO Auto-generated catch block
+			} catch (AppiaCursorException e1) {				
 				e1.printStackTrace();
 			}
 			
@@ -280,7 +276,7 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 			if (ready == true)
 			{				
 				ready = false;
-				
+
 				/*
 				 * Set appropriate child channel before transmitting
 				 */
@@ -288,14 +284,13 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 				try {
 					echoEvent.init ();
 					echoEvent.go ();
-				} catch (AppiaEventException e) {
-					// TODO Auto-generated catch block
+				} catch (AppiaEventException e) {				
 					e.printStackTrace();
 				}
-				
+
 				break;
 			}
-			
+
 			/*
 			 * If the session is already in the middle of a broadcast (ready == false)
 			 * then wait a little before re-trying to transmit.
@@ -303,12 +298,11 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 			try {
 				Thread.sleep(500);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 	}
-	
+
 	private void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
 		if (event.getDir() == Direction.DOWN) {
 			echoBroadcast(event);
@@ -336,8 +330,6 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 		{
 			ready = true;
 		}
-		
-		echoEvent.setText(echoEvent.getText() + " label:"+ (sequenceNumbers[processes.getRank(sa)] - 1));
 		
 		try {
 			echoEvent.go ();
