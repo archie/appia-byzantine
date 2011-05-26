@@ -134,7 +134,7 @@ public class SignatureSession extends Session implements InitializableSession{
     	trustedCertsFile = trustedcertsfile;
     	trustedCertsPass = trustedcertspass.toCharArray();
     	
-    	try{
+    	try{    		
             final KeyStore keyStore = KeyStore.getInstance(storeType);
             keyStore.load(new FileInputStream(keystoreFile), keystorePass);
             
@@ -142,6 +142,7 @@ public class SignatureSession extends Session implements InitializableSession{
             Key key = keyStore.getKey(myAlias,keystorePass);
             if(key instanceof PrivateKey){
             	privKey = (PrivateKey)(key);
+            	            	
             }
             
             trustedStore = KeyStore.getInstance(storeType);
