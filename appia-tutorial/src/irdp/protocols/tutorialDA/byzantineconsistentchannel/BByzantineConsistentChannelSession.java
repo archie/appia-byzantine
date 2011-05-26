@@ -118,7 +118,7 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 		{
 			bcls[i] = new ByzantineEchoBroadcastLayer();
 			bcbs[i] = new ByzantineEchoBroadcastSession(bcls[i]);
-			bcbs[i].init(processes, rank, usercerts, "123456");
+			bcbs[i].init(processes, rank, usercerts, "123456", testCase);
 		}
 	}
 	

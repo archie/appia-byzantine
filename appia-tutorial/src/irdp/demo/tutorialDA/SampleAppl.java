@@ -1229,7 +1229,7 @@ public class SampleAppl {
   private static Channel getByzantineConsistentChannelWithByzantineBehaviour(ProcessSet set, int rank, 
 		  String alias, String userCertificates, String testCase) {
 	  TcpCompleteLayer tcplayer = new TcpCompleteLayer();
-	  irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer ebl = new irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer();
+	  irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelLayer ebl = new irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelLayer();
 	  ApplicationLayer al = new ApplicationLayer();
 
 	  Layer[] qos = {tcplayer, ebl, al};
@@ -1304,6 +1304,9 @@ public class SampleAppl {
 				  else if (qos.equals("bcc")) {
 					  qos = qos + " " + args[++arg] + " " + args[++arg] + " "
 					   	+ args[++arg];
+					  try {
+						  qos = qos + " " + args[++arg];
+					  } catch (ArrayIndexOutOfBoundsException e) { }
 				  }
 				  System.out.println("Starting with QoS: " + qos);
 			  } else
