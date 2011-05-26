@@ -143,9 +143,15 @@ public class SampleAppl {
 				
 				return getPBChannel(set, fanout, rounds);
 			} else if (qosToken.equals("bcc")) {
+				
 				int rank = Integer.parseInt(st.nextToken());
 				String alias = st.nextToken();
 				String userCertificates = st.nextToken();
+				
+				if (st.hasMoreTokens()) {
+					/* the last token contains which test case to run */
+					return getByzantineConsistentChannelWithByzantineBehaviour(set, rank, alias, userCertificates, st.nextToken());
+				}
 				
 				return getByzantineConsistentChannel(set, rank, alias, userCertificates);
 			} else {
@@ -1199,6 +1205,51 @@ public class SampleAppl {
 	  as.init(set, rank);
 
 	  ebs.init(set, rank, alias, userCertificates);
+
+	  Channel channel = myQoS.createUnboundChannel("Print Channel");
+	  ChannelCursor cc = channel.getCursor();
+
+	  try {
+		  cc.bottom();
+		  cc.setSession(tcpsession);
+		  cc.up();
+		  cc.setSession(ebs);
+		  cc.up();
+		  cc.setSession(as);
+
+	  } catch (AppiaCursorException e) {
+		  // TODO Auto-generated catch block
+		  e.printStackTrace();
+	  }
+	  
+	  return channel;
+
+  }
+  
+  private static Channel getByzantineConsistentChannelWithByzantineBehaviour(ProcessSet set, int rank, 
+		  String alias, String userCertificates, String testCase) {
+	  TcpCompleteLayer tcplayer = new TcpCompleteLayer();
+	  irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer ebl = new irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer();
+	  ApplicationLayer al = new ApplicationLayer();
+
+	  Layer[] qos = {tcplayer, ebl, al};
+
+	  QoS myQoS = null;
+	  try {
+		  myQoS = new QoS("byz stack", qos);
+	  } catch (AppiaInvalidQoSException ex) {
+		  System.err. println("Invalid QoS");
+		  System.err. println(ex.getMessage());
+		  System.exit(1);	
+	  }
+
+	  TcpCompleteSession tcpsession = (TcpCompleteSession) tcplayer.createSession();
+	  irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelSession ebs = (irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelSession) ebl.createSession();
+	  irdp.protocols.tutorialDA.echobroadcast.ApplicationSession as = (irdp.protocols.tutorialDA.echobroadcast.ApplicationSession) al.createSession();
+
+	  as.init(set, rank);
+
+	  ebs.init(set, rank, alias, userCertificates, testCase);
 
 	  Channel channel = myQoS.createUnboundChannel("Print Channel");
 	  ChannelCursor cc = channel.getCursor();

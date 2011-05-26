@@ -97,14 +97,13 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 		init(processfile, rank, alias, usercerts);
 	}
 	
-	public void init(String processfile, int rank, String alias,
-			String usercerts, String testCase) {
-		processes = ProcessSet.buildProcessSet(processfile,rank);
-		bccInit (processes, processfile, rank, alias, usercerts, testCase);
+	public void init(ProcessSet set, int rank, String alias, String usercerts, String testCase) {
+		processes = set;
+		bccInit (rank, alias, usercerts, testCase);
 	}
 
 	
-	private void bccInit (ProcessSet processes, String processfile, int rank, String alias, String usercerts, String testCase)
+	private void bccInit (int rank, String alias, String usercerts, String testCase)
 	{
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
