@@ -68,11 +68,9 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	public boolean sentFinal = false;
 	public boolean delivered = false;
 	
-	/* From the algo: Sigmas is an array of signatures, and aliases
-	 * is the corresponding alias for the signature.
+	/* From the algo: Sigmas is an array of signatures.
 	 */
 	private String [] sigmas;
-	private String [] aliases;
 	
 	/*
 	 * Trusted certificates and the password for the signature related
@@ -80,12 +78,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	 */
 	private String trustedCertsFile;
 	private char[] trustedCertsPass;
-	
-	/*
-	 * Value representing bottom.
-	 */
-	final String bottom = "BOTTOM";
-	
 	
 	public EchoBroadcastSession(Layer layer) {
 		super(layer);
@@ -118,7 +110,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			e.printStackTrace();
 		}
 
-		aliases = new String [processes.getAllProcesses().length];
 		sigmas = new String [processes.getAllProcesses().length];
 		N = processes.getAllProcesses().length;		
 	}
@@ -224,19 +215,18 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	}
 	
 	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {
-		/* Pop the signature and alias out of the message because
+		/* Pop the signature out of the message because
 		 * we always have a SignatureSession below us. Failing to
 		 * do so will result in bad things.
 		 */
 		String signature = echoEvent.getMessage().popString();
-		String alias = echoEvent.getMessage().popString();
 		
 		// Now populate the required fields in the message.
 		echoEvent.popValuesFromMessage();
 
 		if (echoEvent.isEcho()) {
-			System.err.println("Collect Echo Reply called");
-			collectEchoReply(echoEvent, alias, signature);
+			//System.err.println("Collect Echo Reply called");
+			collectEchoReply(echoEvent, signature);
 		} else if (echoEvent.isFinal() && !echoEvent.isEcho()) {
 			System.err.println("Deliver Final called");
 			deliverFinal(echoEvent);
@@ -291,12 +281,11 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		return false;
 	}
 
-	private void collectEchoReply(EchoBroadcastEvent echoEvent, String alias, String signature) {
+	private void collectEchoReply(EchoBroadcastEvent echoEvent, String signature) {
 		
 				
 		SocketAddress sa = (SocketAddress) echoEvent.source;
 		
-		aliases[processes.getRank(sa)] = alias;
 		sigmas[processes.getRank(sa)] = signature;
 		
 		// Add to reply queue.
@@ -366,11 +355,9 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		{			
 			
 			try{
-				reply.getMessage().pushString(aliases[i]);
 				reply.getMessage().pushString(sigmas[i]);
 			} catch (NullPointerException e){
-				reply.getMessage().pushString(bottom);
-				reply.getMessage().pushString(bottom);
+				reply.getMessage().pushString(EBConstants.BOTTOM);
 			}
 		}
 		
@@ -388,15 +375,13 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	
 	private void deliverFinal(EchoBroadcastEvent echoEvent) {
 		
-		String sigma, alias;
+		String sigma;
 		int verified = 0;
 		
-		// Unpack signatures and aliases.
-		for (int i = 0; i < processes.getAllProcesses().length; i++)
+		// Unpack signatures.
+		for (int i = processes.getAllProcesses().length-1; i >= 0; i--)
 		{
-			
 			sigmas[i] = echoEvent.getMessage().popString();
-			aliases[i] = echoEvent.getMessage().popString();
 			
 		}
 		
@@ -405,11 +390,10 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		for (int i = 0; i < processes.getAllProcesses().length; i++)
 		{
 			sigma = sigmas[i];
-			alias = aliases[i];
-			if (!sigma.equals(bottom))
+			if (!sigma.equals(EBConstants.BOTTOM))
 			{
 				try {
-					if(SignatureSession.verifySignature(echoMessage, alias, sigma, trustedStore))
+					if(SignatureSession.verifySignature(echoMessage, EBConstants.PROCESS_ALIAS_PREFIX + i, sigma, trustedStore))
 					{
 						verified++;
 					}
@@ -460,7 +444,6 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		sentEcho = false;
 		sentFinal = false;
 		delivered = false;
-		aliases = new String [processes.getAllProcesses().length];
 		sigmas = new String [processes.getAllProcesses().length];
 		replyBuffer = new ArrayList<EchoBroadcastEvent> ();
 		//replyQueue = new HashMap<Integer, List<EchoBroadcastEvent> >();

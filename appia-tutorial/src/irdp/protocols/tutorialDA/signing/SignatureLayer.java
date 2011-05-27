@@ -23,9 +23,9 @@
 //                                                                  //
 // Appia: protocol development and composition framework            //
 //                                                                  //
-// Class: SignatureLayer: //TODO 			 sendable events        //
+// Class: SignatureLayer: 									        //
 //                                                                  //
-// Author: Hugo Miranda, 06/2000                                    //
+// Author: Lalith Suresh, Marcus Ljungblad, Paulo Motta, 05/2011    //
 //                                                                  //
 // Change Log:                                                      //
 //                                                                  //
