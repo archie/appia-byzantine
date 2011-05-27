@@ -154,23 +154,23 @@ public class SampleAppl {
 
 				return getPBChannel(set, fanout, rounds);
 			} else if (qosToken.equals("bcc")) {
-				String alias = st.nextToken();
+				String userKeystore = st.nextToken();
 				String userCertificates = st.nextToken();				
-				return getByzantineConsistentChannel(set, alias, userCertificates);
+				return getByzantineConsistentChannel(set, userKeystore, userCertificates);
 			} else if (qosToken.equals("bcb")) {
-				String alias = st.nextToken();
+				String userKeystore = st.nextToken();
 				String userCertificates = st.nextToken();
-				return getByzantineConsistentBroadcast(set, alias, userCertificates);
+				return getByzantineConsistentBroadcast(set, userKeystore, userCertificates);
 			} else if (qosToken.equals("byzantine_bcc")) {
-				String alias = st.nextToken();
+				String userKeystore = st.nextToken();
 				String userCertificates = st.nextToken();
 				String testCase = st.nextToken();
-				return getByzantineConsistentChannelWithByzantineBehaviour(set, alias, userCertificates, testCase);
+				return getByzantineConsistentChannelWithByzantineBehaviour(set, userKeystore, userCertificates, testCase);
 			} else if (qosToken.equals("byzantine_bcb")) {
-				String alias = st.nextToken();
+				String userKeystore = st.nextToken();
 				String userCertificates = st.nextToken();
 				String testCase = st.nextToken();
-				return getByzantineConsistentBroadcastWithByzantineBehaviour(set, alias, userCertificates, testCase);
+				return getByzantineConsistentBroadcastWithByzantineBehaviour(set, userKeystore, userCertificates, testCase);
 			} else {
 				invalidArgs("Incorrect number of arguments");
 				return null;
@@ -1194,11 +1194,11 @@ public class SampleAppl {
 	/**
 	 * Builds a Byzantine Consistent Broadcast channel. 
 	 * @param set
-	 * @param alias
+	 * @param userKeystore
 	 * @param userCertificates
 	 * @return
 	 */
-	private static Channel getByzantineConsistentBroadcast(ProcessSet set, String alias, String userCertificates) {
+	private static Channel getByzantineConsistentBroadcast(ProcessSet set, String userKeystore, String userCertificates) {
 		TcpCompleteLayer tcpLayer = new TcpCompleteLayer();
 		SignatureLayer signatureLayer = new SignatureLayer();
 		EchoBroadcastLayer ebl = new EchoBroadcastLayer();
@@ -1222,7 +1222,7 @@ public class SampleAppl {
 
 		as.init(set);
 		ebs.init(set, userCertificates, "123456");
-		signatureSession.init(alias, "etc/" + alias + ".jks", "123456", userCertificates, "123456", true);
+		signatureSession.init(EchoBroadcastSession.PROCESS_ALIAS_PREFIX + EchoBroadcastSession.getMyProcessRank(set), userKeystore, "123456", userCertificates, "123456", true);
 
 		Channel channel = myQoS.createUnboundChannel("bcb channel");
 		ChannelCursor cc = channel.getCursor();
@@ -1249,12 +1249,12 @@ public class SampleAppl {
 	 * The testCase argument defines which faulty behaviour to produce. 
 	 * Valid test cases are: "test1", "test2", and "test3" 
 	 * @param set
-	 * @param alias
+	 * @param userKeystore
 	 * @param userCertificates
 	 * @param testCase
 	 * @return
 	 */
-	private static Channel getByzantineConsistentBroadcastWithByzantineBehaviour(ProcessSet set, String alias, 
+	private static Channel getByzantineConsistentBroadcastWithByzantineBehaviour(ProcessSet set, String userKeystore, 
 			String userCertificates, String testCase) {
 		TcpCompleteLayer tcpLayer = new TcpCompleteLayer();
 		SignatureLayer signatureLayer = new SignatureLayer();
@@ -1279,7 +1279,7 @@ public class SampleAppl {
 
 		as.init(set);
 		ebs.init(set, userCertificates, "123456", testCase);
-		signatureSession.init(alias, "etc/" + alias + ".jks", "123456", userCertificates, "123456", true);
+		signatureSession.init(EchoBroadcastSession.PROCESS_ALIAS_PREFIX + EchoBroadcastSession.getMyProcessRank(set), userKeystore, "123456", userCertificates, "123456", true);
 
 		Channel channel = myQoS.createUnboundChannel("bcb channel");
 		ChannelCursor cc = channel.getCursor();
@@ -1306,10 +1306,10 @@ public class SampleAppl {
 	 * and secure channels. 
 	 * @author EMDC
 	 * @param set
-	 * @param alias 
+	 * @param userKeystore 
 	 * @param userCertificates 
 	 */
-	private static Channel getByzantineConsistentChannel(ProcessSet set, String alias, String userCertificates) {
+	private static Channel getByzantineConsistentChannel(ProcessSet set, String userKeystore, String userCertificates) {
 		TcpCompleteLayer tcplayer = new TcpCompleteLayer();
 		ByzantineConsistentChannelLayer bccLayer = new ByzantineConsistentChannelLayer();
 		ApplicationLayer al = new ApplicationLayer();
@@ -1331,7 +1331,7 @@ public class SampleAppl {
 
 		as.init(set);
 
-		bccSession.init(set, alias, userCertificates);
+		bccSession.init(set, userKeystore, userCertificates);
 
 		Channel channel = myQoS.createUnboundChannel("bcc channel");
 		ChannelCursor cc = channel.getCursor();
@@ -1357,13 +1357,13 @@ public class SampleAppl {
 	 * The testCase argument defines which faulty behaviour to produce. 
 	 * Valid test cases are: "test1", "test2", and "test3" 
 	 * @param set
-	 * @param alias
+	 * @param userKeystore
 	 * @param userCertificates
 	 * @param testCase
 	 * @return
 	 */
 	private static Channel getByzantineConsistentChannelWithByzantineBehaviour(ProcessSet set,
-			String alias, String userCertificates, String testCase) {
+			String userKeystore, String userCertificates, String testCase) {
 		TcpCompleteLayer tcplayer = new TcpCompleteLayer();
 		BByzantineConsistentChannelLayer ebl = new BByzantineConsistentChannelLayer();
 		ApplicationLayer al = new ApplicationLayer();
@@ -1385,7 +1385,7 @@ public class SampleAppl {
 
 		as.init(set);
 
-		ebs.init(set, alias, userCertificates, testCase);
+		ebs.init(set, userKeystore, userCertificates, testCase);
 
 		Channel channel = myQoS.createUnboundChannel("Print Channel");
 		ChannelCursor cc = channel.getCursor();

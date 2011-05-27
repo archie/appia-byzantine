@@ -170,7 +170,7 @@ public class ByzantineEchoBroadcastSession extends EchoBroadcastSession {
 			try{
 				reply.getMessage().pushString(sigmas[i]);
 			} catch (NullPointerException e){
-				reply.getMessage().pushString(EBConstants.BOTTOM);
+				reply.getMessage().pushString(BOTTOM);
 			}
 		}
 		

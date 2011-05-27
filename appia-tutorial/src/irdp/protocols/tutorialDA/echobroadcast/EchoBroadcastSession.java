@@ -4,6 +4,7 @@ import irdp.protocols.tutorialDA.events.EchoBroadcastEvent;
 import irdp.protocols.tutorialDA.events.ProcessInitEvent;
 import irdp.protocols.tutorialDA.signing.SignatureSession;
 import irdp.protocols.tutorialDA.utils.ProcessSet;
+import irdp.protocols.tutorialDA.utils.SampleProcess;
 
 import java.io.FileInputStream;
 import java.net.SocketAddress;
@@ -30,6 +31,13 @@ import net.sf.appia.core.message.Message;
  */
 public class EchoBroadcastSession extends Session {
 
+	/*
+	 * Value representing bottom.
+	 */
+	public static final String BOTTOM = "BOTTOM";
+	
+	public static final String PROCESS_ALIAS_PREFIX = "user";
+	
 	protected Channel channel;
 	protected Channel deliverToChannel = null;
 	protected ProcessSet processes;
@@ -332,7 +340,7 @@ public class EchoBroadcastSession extends Session {
 			try {
 				reply.getMessage().pushString(sigmas[i]);
 			} catch (NullPointerException e) {
-				reply.getMessage().pushString(EBConstants.BOTTOM);
+				reply.getMessage().pushString(BOTTOM);
 			}
 		}
 		
@@ -362,9 +370,9 @@ public class EchoBroadcastSession extends Session {
 		Message echoMessage = getEchoMessage(echoEvent);
 		for (int i = 0; i < processes.getAllProcesses().length; i++) {
 			sigma = sigmas[i];
-			if (!sigma.equals(EBConstants.BOTTOM)) {
+			if (!sigma.equals(BOTTOM)) {
 				try {
-					if(SignatureSession.verifySignature(echoMessage, EBConstants.PROCESS_ALIAS_PREFIX + i, sigma, trustedStore)) {
+					if(SignatureSession.verifySignature(echoMessage, PROCESS_ALIAS_PREFIX + i, sigma, trustedStore)) {
 						verified++;
 					}
 				} catch (Exception e) {
@@ -412,6 +420,17 @@ public class EchoBroadcastSession extends Session {
 		delivered = false;
 		sigmas = new String [processes.getAllProcesses().length];
 		replyBuffer = new ArrayList<EchoBroadcastEvent> ();
+	}
+	
+	public static Integer getMyProcessRank(ProcessSet processes) {
+
+		for (SampleProcess process : processes.getAllProcesses()) {
+			if(process.isSelf()){
+				return process.getProcessNumber();
+			}
+		}
+		
+		return -1;
 	}
 
 }

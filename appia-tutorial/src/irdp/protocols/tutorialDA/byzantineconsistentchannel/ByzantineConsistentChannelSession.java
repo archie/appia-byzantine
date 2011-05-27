@@ -6,6 +6,7 @@ import irdp.protocols.tutorialDA.events.EchoBroadcastEvent;
 import irdp.protocols.tutorialDA.signing.SignatureLayer;
 import irdp.protocols.tutorialDA.signing.SignatureSession;
 import irdp.protocols.tutorialDA.utils.ProcessSet;
+import irdp.protocols.tutorialDA.utils.SampleProcess;
 
 import java.net.SocketAddress;
 
@@ -68,19 +69,19 @@ public class ByzantineConsistentChannelSession extends Session {
 	/**
 	 * Initialize processes and signature related parameters.
 	 * @param set - The set of processes to which we belong
-	 * @param alias - Each process have a unique alias
+	 * @param userKeystore - Each process have a unique alias
 	 * @param usercerts - A set of certificates for the trusted entities (each in the process set)
 	 */
-	public void init(ProcessSet set, String alias, String usercerts) {		
+	public void init(ProcessSet set, String userKeystore, String usercerts) {		
 		processes = set;
-		bccInit (alias, usercerts);		
+		bccInit (userKeystore, usercerts);		
 	}
 
 
-	private void bccInit (String alias, String usercerts) {
+	private void bccInit (String userKeystore, String usercerts) {
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
-		sigsession.init(alias, "etc/" + alias + ".jks", "123456", usercerts, "123456", true);
+		sigsession.init(EchoBroadcastSession.PROCESS_ALIAS_PREFIX + EchoBroadcastSession.getMyProcessRank(processes), userKeystore, "123456", usercerts, "123456", true);
 		ready = true;	
 		sequenceNumbers = new int [processes.getAllProcesses().length];
 		bcbs = new EchoBroadcastSession [processes.getAllProcesses().length];

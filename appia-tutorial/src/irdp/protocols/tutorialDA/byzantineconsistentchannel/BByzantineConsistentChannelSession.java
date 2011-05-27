@@ -2,6 +2,7 @@ package irdp.protocols.tutorialDA.byzantineconsistentchannel;
 
 import irdp.protocols.tutorialDA.echobroadcast.ByzantineEchoBroadcastLayer;
 import irdp.protocols.tutorialDA.echobroadcast.ByzantineEchoBroadcastSession;
+import irdp.protocols.tutorialDA.echobroadcast.EchoBroadcastSession;
 import irdp.protocols.tutorialDA.signing.SignatureLayer;
 import irdp.protocols.tutorialDA.signing.SignatureSession;
 import irdp.protocols.tutorialDA.utils.ProcessSet;
@@ -27,17 +28,17 @@ public class BByzantineConsistentChannelSession extends ByzantineConsistentChann
 	 * @param usercerts
 	 * @param testCase
 	 */
-	public void init(ProcessSet set, String alias, String usercerts, String testCase) {
+	public void init(ProcessSet set, String userKeystore, String usercerts, String testCase) {
 		processes = set;
-		bccInit (alias, usercerts, testCase);
+		bccInit (userKeystore, usercerts, testCase);
 	}
 
 	
-	private void bccInit (String alias, String usercerts, String testCase)
+	private void bccInit (String userKeystore, String usercerts, String testCase)
 	{
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
-		sigsession.init(alias, "etc/" + alias + ".jks", "123456", usercerts, "123456", true);
+		sigsession.init(EchoBroadcastSession.PROCESS_ALIAS_PREFIX + EchoBroadcastSession.getMyProcessRank(processes), userKeystore, "123456", usercerts, "123456", true);
 		ready = true;	
 		sequenceNumbers = new int [processes.getAllProcesses().length];
 		bcbs = new ByzantineEchoBroadcastSession [processes.getAllProcesses().length];
