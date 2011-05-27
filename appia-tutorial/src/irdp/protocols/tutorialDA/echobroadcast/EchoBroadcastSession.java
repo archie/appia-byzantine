@@ -215,13 +215,10 @@ public class EchoBroadcastSession extends Session {
 		echoEvent.popValuesFromMessage();
 
 		if (echoEvent.isEcho()) {
-			//System.err.println("Collect Echo Reply called");
 			collectEchoReply(echoEvent, signature);
 		} else if (echoEvent.isFinal() && !echoEvent.isEcho()) {
-			System.err.println("Deliver Final called");
 			deliverFinal(echoEvent);
 		} else if (!echoEvent.isEcho() && !echoEvent.isFinal()) {
-			System.err.println("Send Echo Reply called dst:" + echoEvent.dest + " src:" + echoEvent.source);
 			sendEchoReply(echoEvent);			
 		}
 	}
@@ -367,8 +364,7 @@ public class EchoBroadcastSession extends Session {
 			sigma = sigmas[i];
 			if (!sigma.equals(EBConstants.BOTTOM)) {
 				try {
-					if(SignatureSession.verifySignature(echoMessage, EBConstants.PROCESS_ALIAS_PREFIX + i, sigma, trustedStore))
-					{
+					if(SignatureSession.verifySignature(echoMessage, EBConstants.PROCESS_ALIAS_PREFIX + i, sigma, trustedStore)) {
 						verified++;
 					}
 				} catch (Exception e) {
