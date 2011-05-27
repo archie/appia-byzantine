@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  *
- * Initial developer(s): Alexandre Pinto and Hugo Miranda.
+ * @author Paulo Ricardo, Lalith Suresh and Marcus Ljungblad
  * Contributor(s): See Appia web page for a list of contributors.
  */
  package irdp.protocols.tutorialDA.signing;
@@ -100,6 +100,7 @@ public class SignatureSession extends Session implements InitializableSession{
      * Initializes the session using the parameters given in the XML configuration.
      * Possible parameters:
      * <ul>
+     * <li><b>user_alias</b> The alias of the private key that will be used to sign messages of this layer.
      * <li><b>store_type</b> KeyStore is the format  used to store the keys. Default is "JKS".
      * <li><b>keystore_file</b> Name of the file were the private key is stored.
      * <li><b>keystore_pass</b> Passphrase to access the file where the private key is stored.
@@ -236,6 +237,15 @@ public class SignatureSession extends Session implements InitializableSession{
 		return (signer.verify(sig));
 	}
 	
+	/**
+	 * Verify if a signature is valid for a given message object
+	 * @param message the msg that was signed
+	 * @param userAlias the alias of the user that signed the message
+	 * @param signature the signature itself
+	 * @param trustedStore the keystore of trusted certificates
+	 * @return
+	 * @throws Exception
+	 */
 	public static boolean verifySignature(Message message, String userAlias, String signature, KeyStore trustedStore) throws Exception
 	{
 		boolean verified = false;
