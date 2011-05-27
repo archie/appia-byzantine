@@ -35,12 +35,19 @@ package irdp.demo.tutorialDA;
 import irdp.protocols.tutorialDA.allAckURB.AllAckURBLayer;
 import irdp.protocols.tutorialDA.basicBroadcast.BasicBroadcastLayer;
 import irdp.protocols.tutorialDA.basicBroadcast.BasicBroadcastSession;
+import irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer;
+import irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelSession;
 import irdp.protocols.tutorialDA.consensusMembership.ConsensusMembershipLayer;
 import irdp.protocols.tutorialDA.consensusNBAC.ConsensusNBACLayer;
 import irdp.protocols.tutorialDA.consensusTRB.ConsensusTRBLayer;
 import irdp.protocols.tutorialDA.consensusUTO.ConsensusUTOLayer;
 import irdp.protocols.tutorialDA.eagerPB.EagerPBLayer;
 import irdp.protocols.tutorialDA.echobroadcast.ApplicationLayer;
+import irdp.protocols.tutorialDA.echobroadcast.ApplicationSession;
+import irdp.protocols.tutorialDA.echobroadcast.ByzantineEchoBroadcastLayer;
+import irdp.protocols.tutorialDA.echobroadcast.ByzantineEchoBroadcastSession;
+import irdp.protocols.tutorialDA.echobroadcast.EchoBroadcastLayer;
+import irdp.protocols.tutorialDA.echobroadcast.EchoBroadcastSession;
 import irdp.protocols.tutorialDA.floodingConsensus.FloodingConsensusLayer;
 import irdp.protocols.tutorialDA.gcPastCO.GCPastCOLayer;
 import irdp.protocols.tutorialDA.hierarchicalConsensus.HierarchicalConsensusLayer;
@@ -154,6 +161,14 @@ public class SampleAppl {
 				}
 				
 				return getByzantineConsistentChannel(set, alias, userCertificates);
+			} else if (qosToken.equals("bcb")) {
+				String alias = st.nextToken();
+				String userCertificates = st.nextToken();
+				if (st.hasMoreTokens()) {
+					// byzantine behaviour
+					getByzantineConsistentBroadcastWithByzantineBehaviour(set, alias, userCertificates, st.nextToken());
+				}
+				return getByzantineConsistentBroadcast(set, alias, userCertificates);
 			} else {
 				invalidArgs("Incorrect number of arguments");
 				return null;
@@ -1175,19 +1190,121 @@ public class SampleAppl {
   }
   
   /**
+   * Builds a Byzantine Consistent Broadcast channel. 
+   * @param set
+   * @param alias
+   * @param userCertificates
+   * @return
+   */
+  private static Channel getByzantineConsistentBroadcast(ProcessSet set, String alias, String userCertificates) {
+	  TcpCompleteLayer tcpLayer = new TcpCompleteLayer();
+	  EchoBroadcastLayer ebl = new EchoBroadcastLayer();
+	  ApplicationLayer al = new ApplicationLayer();
+	  
+	  Layer[] qos = { tcpLayer, ebl, al };
+	  
+	  QoS myQoS = null;
+	  try {
+		  myQoS = new QoS("bcb stack", qos);		  
+	  } catch (AppiaInvalidQoSException ex) {
+		  System.err. println("Invalid QoS");
+		  System.err. println(ex.getMessage());
+		  System.exit(1);
+	  }
+	  
+	  TcpCompleteSession tcpSession = (TcpCompleteSession) tcpLayer.createSession();
+	  EchoBroadcastSession ebs = (EchoBroadcastSession) ebl.createSession();
+	  ApplicationSession as = (ApplicationSession) al.createSession();
+	  
+	  as.init(set);
+	  ebs.init(set, userCertificates, "123456");
+	  
+	  Channel channel = myQoS.createUnboundChannel("bcb channel");
+	  ChannelCursor cc = channel.getCursor();
+
+	  try {
+		  cc.bottom();
+		  cc.setSession(tcpSession);
+		  cc.up();
+		  cc.setSession(ebs);
+		  cc.up();
+		  cc.setSession(as);
+
+	  } catch (AppiaCursorException e) {
+		  // TODO Auto-generated catch block
+		  e.printStackTrace();
+	  }
+
+	  return channel;
+  }
+  
+  /**
+   * Builds a byzantine process based on the Byzantine consistent broadcast abstraction. 
+   * The testCase argument defines which faulty behaviour to produce. 
+   * Valid test cases are: "test1", "test2", and "test3" 
+   * @param set
+   * @param alias
+   * @param userCertificates
+   * @param testCase
+   * @return
+   */
+  private static Channel getByzantineConsistentBroadcastWithByzantineBehaviour(ProcessSet set, String alias, 
+		  String userCertificates, String testCase) {
+	  TcpCompleteLayer tcpLayer = new TcpCompleteLayer();
+	  ByzantineEchoBroadcastLayer ebl = new ByzantineEchoBroadcastLayer();
+	  ApplicationLayer al = new ApplicationLayer();
+	  
+	  Layer[] qos = { tcpLayer, ebl, al };
+	  
+	  QoS myQoS = null;
+	  try {
+		  myQoS = new QoS("bcb stack", qos);		  
+	  } catch (AppiaInvalidQoSException ex) {
+		  System.err. println("Invalid QoS");
+		  System.err. println(ex.getMessage());
+		  System.exit(1);
+	  }
+	  
+	  TcpCompleteSession tcpSession = (TcpCompleteSession) tcpLayer.createSession();
+	  ByzantineEchoBroadcastSession ebs = (ByzantineEchoBroadcastSession) ebl.createSession();
+	  ApplicationSession as = (ApplicationSession) al.createSession();
+	  
+	  as.init(set);
+	  ebs.init(set, userCertificates, "123456", testCase);
+	  
+	  Channel channel = myQoS.createUnboundChannel("bcb channel");
+	  ChannelCursor cc = channel.getCursor();
+
+	  try {
+		  cc.bottom();
+		  cc.setSession(tcpSession);
+		  cc.up();
+		  cc.setSession(ebs);
+		  cc.up();
+		  cc.setSession(as);
+
+	  } catch (AppiaCursorException e) {
+		  // TODO Auto-generated catch block
+		  e.printStackTrace();
+	  }
+
+	  return channel;
+  }
+
+  /**
    * Builds a byzantine broadcast channel using signing
    * and secure channels. 
    * @author EMDC
- * @param userCertificates 
- * @param alias2 
- * @param rank2 
+   * @param set
+   * @param alias 
+   * @param userCertificates 
    */
   private static Channel getByzantineConsistentChannel(ProcessSet set, String alias, String userCertificates) {
 	  TcpCompleteLayer tcplayer = new TcpCompleteLayer();
-	  irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer ebl = new irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer();
+	  ByzantineConsistentChannelLayer bccLayer = new ByzantineConsistentChannelLayer();
 	  ApplicationLayer al = new ApplicationLayer();
 
-	  Layer[] qos = {tcplayer, ebl, al};
+	  Layer[] qos = {tcplayer, bccLayer, al};
 
 	  QoS myQoS = null;
 	  try {
@@ -1199,21 +1316,21 @@ public class SampleAppl {
 	  }
 
 	  TcpCompleteSession tcpsession = (TcpCompleteSession) tcplayer.createSession();
-	  irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelSession ebs = (irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelSession) ebl.createSession();
-	  irdp.protocols.tutorialDA.echobroadcast.ApplicationSession as = (irdp.protocols.tutorialDA.echobroadcast.ApplicationSession) al.createSession();
+	  ByzantineConsistentChannelSession bccSession = (ByzantineConsistentChannelSession) bccLayer.createSession();
+	  ApplicationSession as = (ApplicationSession) al.createSession();
 
 	  as.init(set);
 
-	  ebs.init(set, alias, userCertificates);
+	  bccSession.init(set, alias, userCertificates);
 
-	  Channel channel = myQoS.createUnboundChannel("Print Channel");
+	  Channel channel = myQoS.createUnboundChannel("bcc channel");
 	  ChannelCursor cc = channel.getCursor();
 
 	  try {
 		  cc.bottom();
 		  cc.setSession(tcpsession);
 		  cc.up();
-		  cc.setSession(ebs);
+		  cc.setSession(bccSession);
 		  cc.up();
 		  cc.setSession(as);
 
@@ -1226,6 +1343,16 @@ public class SampleAppl {
 
   }
   
+  /**
+   * Builds a byzantine process based on the Byzantine consistent channel abstraction.
+   * The testCase argument defines which faulty behaviour to produce. 
+   * Valid test cases are: "test1", "test2", and "test3" 
+   * @param set
+   * @param alias
+   * @param userCertificates
+   * @param testCase
+   * @return
+   */
   private static Channel getByzantineConsistentChannelWithByzantineBehaviour(ProcessSet set,
 		  String alias, String userCertificates, String testCase) {
 	  TcpCompleteLayer tcplayer = new TcpCompleteLayer();
@@ -1301,12 +1428,12 @@ public class SampleAppl {
 				  if (qos.equals("pb")) {
 					  qos = qos + " " + args[++arg] + " " + args[++arg];
 				  }
-				  else if (qos.equals("bcc")) {
+				  else if (qos.equals("bcc") || qos.equals("bcb")) {
 					  qos = qos + " " + args[++arg] + " " + args[++arg];
 					  try {
 						  qos = qos + " " + args[++arg];
 					  } catch (ArrayIndexOutOfBoundsException e) { }
-				  }
+				  }				  
 				  System.out.println("Starting with QoS: " + qos);
 			  } else
 				  invalidArgs("Unknown argument: "+args[arg]);
@@ -1364,7 +1491,9 @@ public class SampleAppl {
             + "\n\t annr - Read-Impose Write-Consult Atomic (N,N) Register"
             + "\n\t nbac - Consensus-based Non-Blocking Atomic Commit"
             + "\n\t cmem - Consensus-based Membership"
-            + "\n\t trbvs - TRB-based View Synchrony");
+            + "\n\t trbvs - TRB-based View Synchrony"
+            + "\n\t bcb - Byzantine Consistent Broadcast"
+            + "\n\t bcc - Byzantine Consistent Channel");
     System.exit(1);
   }
 }
