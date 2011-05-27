@@ -103,7 +103,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		// FIXME: XML based configuration is currently broken.
 	}
 	
-	public void init(ProcessSet set, int rank, String trustedcertsfile, String trustedcertspass) {
+	public void init(ProcessSet set, String trustedcertsfile, String trustedcertspass) {
 		
 		processes = set;
 		

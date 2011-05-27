@@ -144,16 +144,16 @@ public class SampleAppl {
 				return getPBChannel(set, fanout, rounds);
 			} else if (qosToken.equals("bcc")) {
 				
-				int rank = Integer.parseInt(st.nextToken());
+				//int rank = Integer.parseInt(st.nextToken());
 				String alias = st.nextToken();
 				String userCertificates = st.nextToken();
 				
 				if (st.hasMoreTokens()) {
 					/* the last token contains which test case to run */
-					return getByzantineConsistentChannelWithByzantineBehaviour(set, rank, alias, userCertificates, st.nextToken());
+					return getByzantineConsistentChannelWithByzantineBehaviour(set, alias, userCertificates, st.nextToken());
 				}
 				
-				return getByzantineConsistentChannel(set, rank, alias, userCertificates);
+				return getByzantineConsistentChannel(set, alias, userCertificates);
 			} else {
 				invalidArgs("Incorrect number of arguments");
 				return null;
@@ -1182,7 +1182,7 @@ public class SampleAppl {
  * @param alias2 
  * @param rank2 
    */
-  private static Channel getByzantineConsistentChannel(ProcessSet set, int rank, String alias, String userCertificates) {
+  private static Channel getByzantineConsistentChannel(ProcessSet set, String alias, String userCertificates) {
 	  TcpCompleteLayer tcplayer = new TcpCompleteLayer();
 	  irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer ebl = new irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelLayer();
 	  ApplicationLayer al = new ApplicationLayer();
@@ -1202,9 +1202,9 @@ public class SampleAppl {
 	  irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelSession ebs = (irdp.protocols.tutorialDA.byzantineconsistentchannel.ByzantineConsistentChannelSession) ebl.createSession();
 	  irdp.protocols.tutorialDA.echobroadcast.ApplicationSession as = (irdp.protocols.tutorialDA.echobroadcast.ApplicationSession) al.createSession();
 
-	  as.init(set, rank);
+	  as.init(set);
 
-	  ebs.init(set, rank, alias, userCertificates);
+	  ebs.init(set, alias, userCertificates);
 
 	  Channel channel = myQoS.createUnboundChannel("Print Channel");
 	  ChannelCursor cc = channel.getCursor();
@@ -1226,7 +1226,7 @@ public class SampleAppl {
 
   }
   
-  private static Channel getByzantineConsistentChannelWithByzantineBehaviour(ProcessSet set, int rank, 
+  private static Channel getByzantineConsistentChannelWithByzantineBehaviour(ProcessSet set,
 		  String alias, String userCertificates, String testCase) {
 	  TcpCompleteLayer tcplayer = new TcpCompleteLayer();
 	  irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelLayer ebl = new irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelLayer();
@@ -1247,9 +1247,9 @@ public class SampleAppl {
 	  irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelSession ebs = (irdp.protocols.tutorialDA.byzantineconsistentchannel.BByzantineConsistentChannelSession) ebl.createSession();
 	  irdp.protocols.tutorialDA.echobroadcast.ApplicationSession as = (irdp.protocols.tutorialDA.echobroadcast.ApplicationSession) al.createSession();
 
-	  as.init(set, rank);
+	  as.init(set);
 
-	  ebs.init(set, rank, alias, userCertificates, testCase);
+	  ebs.init(set, alias, userCertificates, testCase);
 
 	  Channel channel = myQoS.createUnboundChannel("Print Channel");
 	  ChannelCursor cc = channel.getCursor();
@@ -1302,8 +1302,7 @@ public class SampleAppl {
 					  qos = qos + " " + args[++arg] + " " + args[++arg];
 				  }
 				  else if (qos.equals("bcc")) {
-					  qos = qos + " " + args[++arg] + " " + args[++arg] + " "
-					   	+ args[++arg];
+					  qos = qos + " " + args[++arg] + " " + args[++arg];
 					  try {
 						  qos = qos + " " + args[++arg];
 					  } catch (ArrayIndexOutOfBoundsException e) { }

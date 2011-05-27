@@ -50,7 +50,7 @@ public class ApplicationSession extends Session {
 				Integer.parseInt(params.getProperty("myrank")));		
 	}
 	
-	public void init(ProcessSet set, int rank) {
+	public void init(ProcessSet set) {
 		processes = set;	
 	}
 	

@@ -93,14 +93,14 @@ public class ByzantineConsistentChannelSession extends Session implements Initia
 	/*
 	 * Initialise processes and signature related parameters.
 	 */
-	public void init(ProcessSet set, int rank, String alias, String usercerts) {
+	public void init(ProcessSet set, String alias, String usercerts) {
 		
 		processes = set;
-		bccInit (rank, alias, usercerts);		
+		bccInit (alias, usercerts);		
 	}
 
 	
-	private void bccInit (int rank, String alias, String usercerts)
+	private void bccInit (String alias, String usercerts)
 	{
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
@@ -115,7 +115,7 @@ public class ByzantineConsistentChannelSession extends Session implements Initia
 		{
 			bcls[i] = new EchoBroadcastLayer();
 			bcbs[i] = new EchoBroadcastSession(bcls[i]);
-			bcbs[i].init(processes, rank, usercerts, "123456");			
+			bcbs[i].init(processes, usercerts, "123456");			
 		}
 	}
 	

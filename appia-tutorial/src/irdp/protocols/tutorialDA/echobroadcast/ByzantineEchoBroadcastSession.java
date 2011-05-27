@@ -108,7 +108,7 @@ public class ByzantineEchoBroadcastSession extends Session implements Initializa
 		// FIXME: XML based configuration is currently broken.
 	}
 	
-	public void init(ProcessSet set, int rank, String trustedcertsfile, String trustedcertspass, String testCase) {
+	public void init(ProcessSet set, String trustedcertsfile, String trustedcertspass, String testCase) {
 		this.testCase = testCase;
 		processes = set;
 		

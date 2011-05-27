@@ -93,21 +93,21 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 	/**
 	 * Initialise processes and signature related parameters.
 	 */
-	public void init(String processfile, int rank, String alias, String usercerts) {
-		init(processfile, rank, alias, usercerts);
+	public void init(String processfile, String alias, String usercerts) {
+		init(processfile, alias, usercerts);
 	}
 	
-	public void init(ProcessSet set, int rank, String alias, String usercerts, String testCase) {
+	public void init(ProcessSet set, String alias, String usercerts, String testCase) {
 		processes = set;
-		bccInit (rank, alias, usercerts, testCase);
+		bccInit (alias, usercerts, testCase);
 	}
 
 	
-	private void bccInit (int rank, String alias, String usercerts, String testCase)
+	private void bccInit (String alias, String usercerts, String testCase)
 	{
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
-		sigsession.init(alias, alias, "123456", usercerts, "123456");
+		sigsession.init(alias, "etc/" + alias + ".jks", "123456", usercerts, "123456");
 		ready = true;	
 		sequenceNumbers = new int [processes.getAllProcesses().length];
 		bcbs = new ByzantineEchoBroadcastSession [processes.getAllProcesses().length];
@@ -118,7 +118,7 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 		{
 			bcls[i] = new ByzantineEchoBroadcastLayer();
 			bcbs[i] = new ByzantineEchoBroadcastSession(bcls[i]);
-			bcbs[i].init(processes, rank, usercerts, "123456", testCase);
+			bcbs[i].init(processes, usercerts, "123456", testCase);
 		}
 	}
 	
