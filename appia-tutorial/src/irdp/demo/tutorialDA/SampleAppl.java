@@ -63,6 +63,8 @@ import irdp.protocols.tutorialDA.readOneWriteAll1NRR.ReadOneWriteAll1NRRLayer;
 import irdp.protocols.tutorialDA.readOneWriteAll1NRR.ReadOneWriteAll1NRRSession;
 import irdp.protocols.tutorialDA.sampleAppl.SampleApplLayer;
 import irdp.protocols.tutorialDA.sampleAppl.SampleApplSession;
+import irdp.protocols.tutorialDA.signing.SignatureLayer;
+import irdp.protocols.tutorialDA.signing.SignatureSession;
 import irdp.protocols.tutorialDA.tcpBasedPFD.TcpBasedPFDLayer;
 import irdp.protocols.tutorialDA.tcpBasedPFD.TcpBasedPFDSession;
 import irdp.protocols.tutorialDA.trbViewSync.TRBViewSyncLayer;
@@ -1198,10 +1200,11 @@ public class SampleAppl {
    */
   private static Channel getByzantineConsistentBroadcast(ProcessSet set, String alias, String userCertificates) {
 	  TcpCompleteLayer tcpLayer = new TcpCompleteLayer();
+	  SignatureLayer signatureLayer = new SignatureLayer();
 	  EchoBroadcastLayer ebl = new EchoBroadcastLayer();
 	  ApplicationLayer al = new ApplicationLayer();
 	  
-	  Layer[] qos = { tcpLayer, ebl, al };
+	  Layer[] qos = { tcpLayer, signatureLayer, ebl, al };
 	  
 	  QoS myQoS = null;
 	  try {
@@ -1213,11 +1216,13 @@ public class SampleAppl {
 	  }
 	  
 	  TcpCompleteSession tcpSession = (TcpCompleteSession) tcpLayer.createSession();
+	  SignatureSession signatureSession = (SignatureSession) signatureLayer.createSession();
 	  EchoBroadcastSession ebs = (EchoBroadcastSession) ebl.createSession();
 	  ApplicationSession as = (ApplicationSession) al.createSession();
 	  
 	  as.init(set);
 	  ebs.init(set, userCertificates, "123456");
+	  signatureSession.init(alias, "etc/" + alias + ".jks", "123456", userCertificates, "123456", true);
 	  
 	  Channel channel = myQoS.createUnboundChannel("bcb channel");
 	  ChannelCursor cc = channel.getCursor();
@@ -1225,6 +1230,8 @@ public class SampleAppl {
 	  try {
 		  cc.bottom();
 		  cc.setSession(tcpSession);
+		  cc.up();
+		  cc.setSession(signatureSession);
 		  cc.up();
 		  cc.setSession(ebs);
 		  cc.up();
@@ -1251,10 +1258,11 @@ public class SampleAppl {
   private static Channel getByzantineConsistentBroadcastWithByzantineBehaviour(ProcessSet set, String alias, 
 		  String userCertificates, String testCase) {
 	  TcpCompleteLayer tcpLayer = new TcpCompleteLayer();
+	  SignatureLayer signatureLayer = new SignatureLayer();
 	  ByzantineEchoBroadcastLayer ebl = new ByzantineEchoBroadcastLayer();
 	  ApplicationLayer al = new ApplicationLayer();
 	  
-	  Layer[] qos = { tcpLayer, ebl, al };
+	  Layer[] qos = { tcpLayer, signatureLayer, ebl, al };
 	  
 	  QoS myQoS = null;
 	  try {
@@ -1266,11 +1274,13 @@ public class SampleAppl {
 	  }
 	  
 	  TcpCompleteSession tcpSession = (TcpCompleteSession) tcpLayer.createSession();
+	  SignatureSession signatureSession = (SignatureSession) signatureLayer.createSession();
 	  ByzantineEchoBroadcastSession ebs = (ByzantineEchoBroadcastSession) ebl.createSession();
 	  ApplicationSession as = (ApplicationSession) al.createSession();
 	  
 	  as.init(set);
 	  ebs.init(set, userCertificates, "123456", testCase);
+	  signatureSession.init(alias, "etc/" + alias + ".jks", "123456", userCertificates, "123456", true);
 	  
 	  Channel channel = myQoS.createUnboundChannel("bcb channel");
 	  ChannelCursor cc = channel.getCursor();
@@ -1278,6 +1288,8 @@ public class SampleAppl {
 	  try {
 		  cc.bottom();
 		  cc.setSession(tcpSession);
+		  cc.up();
+		  cc.setSession(signatureSession);
 		  cc.up();
 		  cc.setSession(ebs);
 		  cc.up();
