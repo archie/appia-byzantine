@@ -268,6 +268,7 @@ public class ByzantineConsistentChannelSession extends Session implements Initia
 		/* TODO: Make sure two consequent requests are pipelined */
 		while(true)
 		{
+			
 			if (ready == true)
 			{				
 				ready = false;
@@ -307,7 +308,7 @@ public class ByzantineConsistentChannelSession extends Session implements Initia
 	}
 	
 	private void pp2pdeliver(EchoBroadcastEvent echoEvent) {
-
+		
 		/*
 		 * Re-initialise another instance for the pth bcb instance,
 		 * where p is the process ID of the process that initiated
