@@ -107,7 +107,7 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 	{
 		siglayer = new SignatureLayer();
 		sigsession = new SignatureSession(siglayer);
-		sigsession.init(alias, "etc/" + alias + ".jks", "123456", usercerts, "123456");
+		sigsession.init(alias, "etc/" + alias + ".jks", "123456", usercerts, "123456", true);
 		ready = true;	
 		sequenceNumbers = new int [processes.getAllProcesses().length];
 		bcbs = new ByzantineEchoBroadcastSession [processes.getAllProcesses().length];

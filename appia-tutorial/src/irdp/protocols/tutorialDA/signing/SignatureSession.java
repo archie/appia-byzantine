@@ -19,6 +19,18 @@
  */
  package irdp.protocols.tutorialDA.signing;
 
+//////////////////////////////////////////////////////////////////////
+//																	//
+//Appia: protocol development and composition framework            	//
+//																	//
+//Class: SignatureLayer: 									        //
+//																	//
+//Author: Lalith Suresh, Marcus Ljungblad, Paulo Motta, 05/2011    	//
+//																	//
+//Change Log:                                                       //
+//																	//
+//////////////////////////////////////////////////////////////////////
+ 
 import java.io.FileInputStream;
 import java.security.Key;
 import java.security.KeyStore;
@@ -39,35 +51,41 @@ import sun.misc.BASE64Encoder;
 
 public class SignatureSession extends Session implements InitializableSession{
     
-    /*
+    private static final String SIGN_ALGORITHM = "SHA1withRSA";
+
+	/*
      * KeyStore, format  used to store the keys.
      * Ex: "JKS"
      */
     private String storeType = "JKS";
+    
     /*
      * Name of the file were the private key is stored.
      */
     private String keystoreFile=null;
+    
     /*
      * Passphrase to access the file where the private key is stored.
      */
     private char[] keystorePass=null;
+    
     /*
      * Name of the file were the certificates are stored.
      */
     private String trustedCertsFile=null;
+    
     /* Passphrase to access the file where the trusted certificates are stored.
      */
     private char[] trustedCertsPass=null;
 	
-    
     private String myAlias;
     
     private KeyStore trustedStore;
     private PrivateKey privKey;
     
     private BASE64Encoder enc;
-    private BASE64Decoder dec;
+    
+    private boolean pushSignature = false;
     
     /**
      * @see net.sf.appia.core.Session
@@ -76,73 +94,67 @@ public class SignatureSession extends Session implements InitializableSession{
     public SignatureSession(SignatureLayer l) {
     	super(l);
     	enc = new BASE64Encoder();
-    	dec = new BASE64Decoder();
     }
     
     /**
      * Initializes the session using the parameters given in the XML configuration.
      * Possible parameters:
      * <ul>
-     * <li><b>localport</b> the local port to bind.
-     * <li><b>remotehost</b> the remote host (IP address).
-     * <li><b>remoteport</b> the remote port.
+     * <li><b>store_type</b> KeyStore is the format  used to store the keys. Default is "JKS".
+     * <li><b>keystore_file</b> Name of the file were the private key is stored.
+     * <li><b>keystore_pass</b> Passphrase to access the file where the private key is stored.
+     * <li><b>trustedcerts_file</b> Name of the file were the trusted certificates are stored.
+     * <li><b>keystore_pass</b> Passphrase to access the file where the trusted certificates are stored. 
+     * <li><b>push_signature</b> If signature should be pushed to upper layer.
      * </ul>
      * 
-     * @param params The parameters given in the XML configuration.
+     * @param props The parameters given in the XML configuration.
+     * @see net.sf.appia.protocols.tcpcomplete.TcpCompleteSession#init(net.sf.appia.xml.utils.SessionProperties)
      */
     public void init(SessionProperties props) {
-    	//Set user ID
     	if(props.containsKey("user_alias"))
-    		myAlias = props.getString("user_alias");
+    		this.myAlias = props.getString("user_alias");
     	if(props.containsKey("store_type"))
-    		storeType = props.getString("store_type");
+    		this.storeType = props.getString("store_type");
     	if(props.containsKey("keystore_file"))
-    		keystoreFile = props.getString("keystore_file");
+    		this.keystoreFile = props.getString("keystore_file");
     	if(props.containsKey("passphrase"))
-    		keystorePass = props.getCharArray("keystore_pass");
+    		this.keystorePass = props.getCharArray("keystore_pass");
     	if(props.containsKey("keystore_file"))
-    		keystoreFile = props.getString("keystore_file");
+    		this.keystoreFile = props.getString("keystore_file");
     	if(props.containsKey("keystore_pass"))
-    		keystorePass = props.getCharArray("keystore_pass");
+    		this.keystorePass = props.getCharArray("keystore_pass");
     	if(props.containsKey("trustedcerts_file"))
-    		trustedCertsFile = props.getString("trustedcerts_file");
+    		this.trustedCertsFile = props.getString("trustedcerts_file");
     	if(props.containsKey("trustedcerts_pass"))
-    		trustedCertsPass = props.getCharArray("trustedcerts_pass");
+    		this.trustedCertsPass = props.getCharArray("trustedcerts_pass");
+    	if(props.containsKey("push_signature"))
+    		this.pushSignature = props.getString("push_signature").equals("true");
     	    	
-    	try{
-            final KeyStore keyStore = KeyStore.getInstance(storeType);
-            keyStore.load(new FileInputStream(keystoreFile), keystorePass);
-            
-            //FIXME for simplicity assuming same password as keystore
-            Key key = keyStore.getKey(myAlias,keystorePass);
-            if(key instanceof PrivateKey){
-            	privKey = (PrivateKey)(key);
-            }
-            
-            trustedStore = KeyStore.getInstance(storeType);
-            trustedStore.load(new FileInputStream(trustedCertsFile), trustedCertsPass);
-    	} catch (Exception e) {
-			e.printStackTrace();
-		}
+    	loadKeys();
     }
     
-    public void init (String useralias, String keystorefile, String keystorepass, String trustedcertsfile, String trustedcertspass)
+    public void init (String useralias, String keystorefile, String keystorepass, String trustedcertsfile, String trustedcertspass, boolean pushSignature)
     {
-    	myAlias = useralias;
-    	keystoreFile = keystorefile;
-    	keystorePass = keystorepass.toCharArray();
-    	trustedCertsFile = trustedcertsfile;
-    	trustedCertsPass = trustedcertspass.toCharArray();
+    	this.myAlias = useralias;
+    	this.keystoreFile = keystorefile;
+    	this.keystorePass = keystorepass.toCharArray();
+    	this.trustedCertsFile = trustedcertsfile;
+    	this.trustedCertsPass = trustedcertspass.toCharArray();
+    	this.pushSignature = pushSignature;
     	
-    	try{    		
+    	loadKeys();
+    }
+    
+	private void loadKeys() {
+		try{
             final KeyStore keyStore = KeyStore.getInstance(storeType);
             keyStore.load(new FileInputStream(keystoreFile), keystorePass);
             
-            //FIXME for simplicity assuming same password as keystore
+            //TODO for simplicity assuming same password as keystore
             Key key = keyStore.getKey(myAlias,keystorePass);
             if(key instanceof PrivateKey){
             	privKey = (PrivateKey)(key);
-            	            	
             }
             
             trustedStore = KeyStore.getInstance(storeType);
@@ -150,7 +162,7 @@ public class SignatureSession extends Session implements InitializableSession{
     	} catch (Exception e) {
 			e.printStackTrace();
 		}
-    }
+	}
     
     public void handle(Event e) {
     	
@@ -160,45 +172,65 @@ public class SignatureSession extends Session implements InitializableSession{
     		Message message = evt.getMessage();
     		
     		if(e.getDir() == Direction.DOWN){
-    			message.pushString(myAlias);
-    			
-    			try {
-        			String signature = enc.encode(signData(message.toByteArray(), privKey));
-        			message.pushString(signature);
-        			e.go();        			
-    			} catch(Exception ex){
-    				System.err.println("Error on signing outgoing message.");
-    				ex.printStackTrace();
-    			}
-    		} else {
-    			String signature = message.popString();
-    			String userAlias = message.popString();
-    			
-    			try{
-    				if(verifySignature(message, userAlias, signature, trustedStore)){
-    					//FIXME
-    					message.pushString(userAlias);
-    					message.pushString(signature);
-						e.go();
-    				}
-    			} catch(Exception ex){
-    				System.err.println("Error on verifying signature of ingoing message.");
-    				ex.printStackTrace();
-    			}
-
+    			attachSignatureAndGo(e, message);
+    		} else { //Direction.UP
+    			verifySignatureAndGo(e, message);
     		}
     	}
     }
+
+    /**
+     * Pushes the alias, sign the message and afterwards pushes the
+     * generated signature to the message, and send down
+     * @param e event
+     * @param message
+     */
+	private void attachSignatureAndGo(Event e, Message message) {
+		message.pushString(myAlias);
+		
+		try {
+			String signature = enc.encode(signData(message.toByteArray(), privKey));
+			message.pushString(signature);
+			e.go();        			
+		} catch(Exception ex){
+			System.err.println("Error on signing outgoing message.");
+			ex.printStackTrace();
+		}
+	}
+    
+	/**
+	 * Pops the signature and the alias for the message, verify if
+	 * signature is valid for that alias public key, 
+	 * and send up in positive case
+	 * @param e event
+	 * @param message
+	 */
+	private void verifySignatureAndGo(Event e, Message message) {
+		String signature = message.popString();
+		String userAlias = message.popString();
+		
+		try{
+			if(verifySignature(message, userAlias, signature, trustedStore)){
+				if(pushSignature){
+					message.pushString(signature);
+				}
+				e.go();
+			}
+		} catch(Exception ex){
+			System.err.println("Error on verifying signature of ingoing message.");
+			ex.printStackTrace();
+		}
+	}
 	
 	public static byte[] signData(byte[] data, PrivateKey key) throws Exception {
-		Signature signer = Signature.getInstance("SHA1withRSA");
+		Signature signer = Signature.getInstance(SIGN_ALGORITHM);
 		signer.initSign(key);
 		signer.update(data);
 		return (signer.sign());
 	}
 
 	public static boolean verifySig(byte[] data, PublicKey key, byte[] sig) throws Exception {
-		Signature signer = Signature.getInstance("SHA1withRSA");
+		Signature signer = Signature.getInstance(SIGN_ALGORITHM);
 		signer.initVerify(key);
 		signer.update(data);
 		return (signer.verify(sig));
@@ -213,7 +245,7 @@ public class SignatureSession extends Session implements InitializableSession{
 			Certificate userCert = trustedStore.getCertificate(userAlias);
 			message.pushString(userAlias);
 			if(verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
-				//System.out.println("Signature of user " + userAlias + " succesfully verified");
+				//System.out.println("Signature of user " + userAlias + " succesfully verified"); //TODO uncomment here to debug
 				verified = true;
 			} else {
 				System.err.println("Failure on verifying signature of user " + userAlias + ".");
