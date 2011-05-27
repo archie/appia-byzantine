@@ -152,25 +152,23 @@ public class SampleAppl {
 				
 				return getPBChannel(set, fanout, rounds);
 			} else if (qosToken.equals("bcc")) {
-				
-				//int rank = Integer.parseInt(st.nextToken());
 				String alias = st.nextToken();
-				String userCertificates = st.nextToken();
-				
-				if (st.hasMoreTokens()) {
-					/* the last token contains which test case to run */
-					return getByzantineConsistentChannelWithByzantineBehaviour(set, alias, userCertificates, st.nextToken());
-				}
-				
+				String userCertificates = st.nextToken();				
 				return getByzantineConsistentChannel(set, alias, userCertificates);
 			} else if (qosToken.equals("bcb")) {
 				String alias = st.nextToken();
 				String userCertificates = st.nextToken();
-				if (st.hasMoreTokens()) {
-					// byzantine behaviour
-					getByzantineConsistentBroadcastWithByzantineBehaviour(set, alias, userCertificates, st.nextToken());
-				}
 				return getByzantineConsistentBroadcast(set, alias, userCertificates);
+			} else if (qosToken.equals("byzantine_bcc")) {
+				String alias = st.nextToken();
+				String userCertificates = st.nextToken();
+				String testCase = st.nextToken();
+				return getByzantineConsistentChannelWithByzantineBehaviour(set, alias, userCertificates, testCase);
+			} else if (qosToken.equals("byzantine_bcb")) {
+				String alias = st.nextToken();
+				String userCertificates = st.nextToken();
+				String testCase = st.nextToken();
+				return getByzantineConsistentBroadcastWithByzantineBehaviour(set, alias, userCertificates, testCase);
 			} else {
 				invalidArgs("Incorrect number of arguments");
 				return null;
@@ -1440,12 +1438,12 @@ public class SampleAppl {
 				  if (qos.equals("pb")) {
 					  qos = qos + " " + args[++arg] + " " + args[++arg];
 				  }
-				  else if (qos.equals("bcc") || qos.equals("bcb")) {
-					  qos = qos + " " + args[++arg] + " " + args[++arg];
-					  try {
-						  qos = qos + " " + args[++arg];
-					  } catch (ArrayIndexOutOfBoundsException e) { }
-				  }				  
+				  else if (qos.equals("bcb") || qos.equals("bcc")) {
+					  qos = qos + " " + args[++arg] + " " + args[++arg];					  
+				  }				
+				  else if (qos.equals("byzantine_bcb") || qos.equals("byzantine_bcc")) {
+					  qos = qos + " " + args[++arg] + " " + args[++arg] + " " + args[++arg];
+				  }
 				  System.out.println("Starting with QoS: " + qos);
 			  } else
 				  invalidArgs("Unknown argument: "+args[arg]);
@@ -1505,7 +1503,9 @@ public class SampleAppl {
             + "\n\t cmem - Consensus-based Membership"
             + "\n\t trbvs - TRB-based View Synchrony"
             + "\n\t bcb - Byzantine Consistent Broadcast"
-            + "\n\t bcc - Byzantine Consistent Channel");
+            + "\n\t bcc - Byzantine Consistent Channel"
+            + "\n\t byzantine_bcb - Byzantine Consistent Broadcast with Byzantine behaviour"
+            + "\n\t byzantine_bcc - Byzantine Consistent Channel with Byzantine behaviour");
     System.exit(1);
   }
 }
