@@ -9,9 +9,10 @@ import net.sf.appia.core.Channel;
 import net.sf.appia.core.Layer;
 
 /**
- * Echo Broadcast Layer
+ * Byzantine Consistent Channel abstraction as defined in algorithm 3.19 
+ * This class models different byzantine behaviours depending on how it 
+ * is being initialized. 
  * @author EMDC
- * @param <layerType>
  */
 public class BByzantineConsistentChannelSession extends ByzantineConsistentChannelSession {
 
@@ -19,7 +20,13 @@ public class BByzantineConsistentChannelSession extends ByzantineConsistentChann
 		super(layer);
 	}
 	
-	
+	/**
+	 * Initialize with a byzantine behaviour. Valid test cases are: "test1", "test2", "test3"
+	 * @param set
+	 * @param alias
+	 * @param usercerts
+	 * @param testCase
+	 */
 	public void init(ProcessSet set, String alias, String usercerts, String testCase) {
 		processes = set;
 		bccInit (alias, usercerts, testCase);

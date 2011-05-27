@@ -20,15 +20,14 @@ public class ApplicationSession extends Session {
 
 
 	private Channel channel;
-	private int localPort;
 	private ProcessSet processes;
-    private ApplicationShell shell;
-	
+	private ApplicationShell shell;
+
 	public ApplicationSession(Layer layer) {
 		super(layer);
 	}
 
-	
+
 	public void handle(Event event) {
 		if (event instanceof ChannelInit) {
 			handleChannelEvent((ChannelInit) event);
@@ -44,51 +43,48 @@ public class ApplicationSession extends Session {
 			}
 		}
 	}
-	
+
 	public void init(SessionProperties params) {
 		processes = ProcessSet.buildProcessSet(params.getProperty("processes"),
 				Integer.parseInt(params.getProperty("myrank")));		
 	}
-	
+
 	public void init(ProcessSet set) {
 		processes = set;	
 	}
-	
+
 	private void handleChannelEvent(ChannelInit event) {
 		channel = ((ChannelInit) event).getChannel();
-				
+
 		try {
 			event.go();
 		} catch (AppiaEventException e) {
 			e.printStackTrace();
 		}
-				 
-        try {
-        	InetSocketAddress temp = (InetSocketAddress) processes.getSelfProcess().getSocketAddress();
-            new RegisterSocketEvent(channel,Direction.DOWN,
-            		this, temp.getPort()).go();
-        } catch (AppiaEventException e1) {
-            e1.printStackTrace();
-        }
+
+		try {
+			InetSocketAddress temp = (InetSocketAddress) processes.getSelfProcess().getSocketAddress();
+			new RegisterSocketEvent(channel,Direction.DOWN,
+					this, temp.getPort()).go();
+		} catch (AppiaEventException e1) {
+			e1.printStackTrace();
+		}
 	}
 
 	private void handleEchoBroadcastEvent (EchoBroadcastEvent event)
 	{
-		if (event.getDir() == Direction.UP)
-		{
+		if (event.getDir() == Direction.UP) {
 			System.out.print("\n> " + event.getText()+"\n> ");
 		}
-		else
-		{	
+		else {	
 			try {
 				event.go ();
 			} catch (AppiaEventException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
 	}
-	
+
 	private void handleRegisterSocketEvent(RegisterSocketEvent event) {
 		if (event.error) {
 			System.exit(-1);
@@ -96,10 +92,10 @@ public class ApplicationSession extends Session {
 			// start debugging shell
 			System.out.println("Started application ... ");
 
-	        shell = new ApplicationShell (channel);
-	        final Thread t = event.getChannel().getThreadFactory().newThread(shell);
-	        t.setName("Ecco shell");
-	        t.start();
+			shell = new ApplicationShell (channel);
+			final Thread t = event.getChannel().getThreadFactory().newThread(shell);
+			t.setName("Ecco shell");
+			t.start();
 		}
 	}
 

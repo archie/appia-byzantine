@@ -12,7 +12,8 @@ import net.sf.appia.core.Layer;
 import net.sf.appia.core.events.AppiaMulticast;
 
 /**
- * Byzantine Echo Broadcast Layer
+ * Byzantine Echo Broadcast (also called Signed Echo Broadcast) defined in
+ * algorithm 3.17 with byzantine behaviour modeling depending on test case.  
  * @author EMDC
  */
 public class ByzantineEchoBroadcastSession extends EchoBroadcastSession {
@@ -26,10 +27,15 @@ public class ByzantineEchoBroadcastSession extends EchoBroadcastSession {
 		super(layer);
 	}
 	
-	
+	/**
+	 * Initialize with a byzantine behaviour. Valid test cases are: "test1", "test2", "test3"
+	 * @param set
+	 * @param alias
+	 * @param usercerts
+	 * @param testCase
+	 */
 	public void init(ProcessSet set, String trustedcertsfile, String trustedcertspass, String testCase) {
-		this.testCase = testCase;
-		
+		this.testCase = testCase;		
 		super.init(set, trustedcertsfile, trustedcertspass);	
 	}
 	
