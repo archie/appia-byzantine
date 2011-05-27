@@ -8,14 +8,7 @@ import irdp.protocols.tutorialDA.signing.SignatureLayer;
 import irdp.protocols.tutorialDA.signing.SignatureSession;
 import irdp.protocols.tutorialDA.utils.ProcessSet;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import net.sf.appia.core.AppiaCursorException;
 import net.sf.appia.core.AppiaDuplicatedSessionsException;
@@ -28,12 +21,8 @@ import net.sf.appia.core.Event;
 import net.sf.appia.core.Layer;
 import net.sf.appia.core.QoS;
 import net.sf.appia.core.Session;
-import net.sf.appia.core.events.AppiaMulticast;
 import net.sf.appia.core.events.channel.ChannelInit;
 import net.sf.appia.protocols.common.RegisterSocketEvent;
-import net.sf.appia.protocols.tcpcomplete.TcpCompleteLayer;
-import net.sf.appia.protocols.tcpcomplete.TcpCompleteSession;
-import net.sf.appia.xml.AppiaXML;
 import net.sf.appia.xml.interfaces.InitializableSession;
 import net.sf.appia.xml.utils.SessionProperties;
 
@@ -46,35 +35,35 @@ public class ByzantineConsistentChannelSession extends Session implements Initia
 
 		
 	// From the algo: N[]
-	private int [] sequenceNumbers;
+	protected int [] sequenceNumbers;
 	
 	// Instances of Byzantine Consistent Broadcast (bcb) sessions
-	private EchoBroadcastSession [] bcbs;
+	protected EchoBroadcastSession [] bcbs;
 	
-	// Instances of Instances of Byzantine Consistent Broadcast (Layers)
-	private EchoBroadcastLayer [] bcls;
+	// Instances of Byzantine Consistent Broadcast (Layers)
+	protected EchoBroadcastLayer [] bcls;
 	
 	// Signature session that lives below the bcb instances
-	private SignatureSession sigsession;
+	protected SignatureSession sigsession;
 	
 	// Signature layer that lives below the bcb instances
-	private SignatureLayer siglayer;
+	protected SignatureLayer siglayer;
 	
 	// Channels used for each of the bcb instances.
-	private Channel [] childChannels;
+	protected Channel [] childChannels;
 
 	// A flag to indicate if the childChannels are ready
-	private boolean childChannelsReady = false;
+	protected boolean childChannelsReady = false;
 	
 	// From the algo: Ready
-	boolean ready;
+	protected boolean ready;
 	
 	// Set of processes in the system
-	private ProcessSet processes;
+	protected ProcessSet processes;
 	
 	// The channel that includes this session, which branches
 	// out into the childChannels declared above.
-	Channel channel;
+	protected Channel channel;
 		
 	
 	public ByzantineConsistentChannelSession(Layer layer) {

@@ -31,37 +31,37 @@ import net.sf.appia.xml.utils.SessionProperties;
  */
 public class EchoBroadcastSession extends Session implements InitializableSession {
 
-	private Channel channel;
-	private Channel deliverToChannel = null;
-	private ProcessSet processes;
-    private KeyStore trustedStore;
+	protected Channel channel;
+	protected Channel deliverToChannel = null;
+	protected ProcessSet processes;
+	protected KeyStore trustedStore;
     	
-	private int N = 0;
-	private int F = 1;
+	protected int N = 0;
+	protected int F = 1;
 	
     /*
      * KeyStore, format  used to store the keys.
      * Ex: "JKS"
      */
-    private String storeType = "JKS";
+	protected String storeType = "JKS";
 	
 	/*
 	 * A buffer to know what messages we've already
 	 * sent echos to.
 	 */
-	private List<EchoBroadcastEvent> replyBuffer;
+	protected List<EchoBroadcastEvent> replyBuffer;
 	
 	/*
 	 * List of echos the sender has collected for each
 	 * broadcast (or sequence number).
 	 */
-	private Map<Integer, List<EchoBroadcastEvent>> replyQueue;
+	protected Map<Integer, List<EchoBroadcastEvent>> replyQueue;
 	
 	/*
 	 * Implemented for safety reasons. One sequence number
 	 * per broadcast.
 	 */
-	private int sequenceNumber;
+	protected int sequenceNumber;
 
 	/* From the algo: The below holds state information for each broadcast */	
 	public boolean sentEcho = false;
@@ -70,14 +70,14 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	
 	/* From the algo: Sigmas is an array of signatures.
 	 */
-	private String [] sigmas;
+	protected String [] sigmas;
 	
 	/*
 	 * Trusted certificates and the password for the signature related
 	 * operations.
 	 */
-	private String trustedCertsFile;
-	private char[] trustedCertsPass;
+	protected String trustedCertsFile;
+	protected char[] trustedCertsPass;
 	
 	public EchoBroadcastSession(Layer layer) {
 		super(layer);
@@ -140,7 +140,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	}
 	
 	/* Called by ProcessSet abstraction */
-	 private void handleProcessInitEvent(ProcessInitEvent event) {
+	 protected void handleProcessInitEvent(ProcessInitEvent event) {
 		    processes = event.getProcessSet();
 		    try {
 		      event.go();
@@ -150,7 +150,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	 }
 
 	
-	private void handleRSE(RegisterSocketEvent event) {	
+	protected void handleRSE(RegisterSocketEvent event) {	
 		try {
 			event.go();
 		} catch (AppiaEventException e) {
@@ -171,7 +171,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	/** 
 	 * Initiate a broadcast of a message
 	 */
-	public void echoBroadcast(EchoBroadcastEvent echoEvent) {
+	protected void echoBroadcast(EchoBroadcastEvent echoEvent) {
 				
 		int nextSequenceNumber = ++sequenceNumber;
 						
@@ -206,7 +206,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 	}
 	
-	private void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
+	protected void handleEchoBroadcastEvent(EchoBroadcastEvent event) {
 		if (event.getDir() == Direction.DOWN) {
 			echoBroadcast(event);
 		} else if (event.getDir() == Direction.UP) {
@@ -236,7 +236,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 	}
 	
-	private void sendEchoReply(EchoBroadcastEvent echoEvent) {
+	protected void sendEchoReply(EchoBroadcastEvent echoEvent) {
 		if (alreadyReplied(echoEvent)) {
 			return;
 		}
@@ -269,7 +269,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}			
 	}
 
-	private boolean alreadyReplied(EchoBroadcastEvent echoEvent) {
+	protected boolean alreadyReplied(EchoBroadcastEvent echoEvent) {
 		for (EchoBroadcastEvent e : replyBuffer) {
 			if (e.getSequenceNumber() == echoEvent.getSequenceNumber()) {
 				return true; // this will not work when multiple
@@ -281,8 +281,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		return false;
 	}
 
-	private void collectEchoReply(EchoBroadcastEvent echoEvent, String signature) {
-		
+	protected void collectEchoReply(EchoBroadcastEvent echoEvent, String signature) {
 				
 		SocketAddress sa = (SocketAddress) echoEvent.source;
 		
@@ -290,11 +289,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		
 		// Add to reply queue.
 		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
-		
-		int len = replyQueue.get(echoEvent.getSequenceNumber()).size();
-		
-		System.err.println("ReplyQueue size is: " + len + " " + Math.floor((N + F)/2.0) + " " + sentFinal);
-		
+						
 		// From algo: When #echos > (N + F)/2, and the echos are verified, then continue
 		// Note: The verification is done by the signature layer below. Msgs who's verification has
 		// failed won't make it till here.
@@ -338,7 +333,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		}
 	}
 	
-	private void sendFinal(EchoBroadcastEvent echoEvent) {
+	protected void sendFinal(EchoBroadcastEvent echoEvent) {
 		System.err.println("SendFinal called");
 		sentFinal = true;
 		EchoBroadcastEvent reply = new EchoBroadcastEvent ();
