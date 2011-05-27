@@ -160,7 +160,8 @@ public class ByzantineConsistentChannelSession extends Session implements Initia
 
 	/**
 	 * Including a Byzantine Consistent Channel instance in your
-	 * stack will initialise multiple instances of Byzantine Consistent
+	 * stack will initialise multiple inst		System.err.println("SendFinal called");
+ances of Byzantine Consistent
 	 * Broadcast (bcb) sessions, and a signature layer below them.
 	 * We use sub-channels to de-multiplex events into the appropriate
 	 * bcb session as required.
@@ -276,7 +277,8 @@ public class ByzantineConsistentChannelSession extends Session implements Initia
 				/*
 				 * Set appropriate child channel before transmitting
 				 */
-				echoEvent.setChannel(childChannels[processes.getSelfRank()]);			
+				echoEvent.setChannel(childChannels[processes.getSelfRank()]);
+				bcbs[processes.getSelfRank()].reset ();
 				try {
 					echoEvent.init ();
 					echoEvent.go ();

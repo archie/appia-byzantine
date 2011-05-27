@@ -233,7 +233,7 @@ public class SignatureSession extends Session implements InitializableSession{
 			Certificate userCert = trustedStore.getCertificate(userAlias);
 			message.pushString(userAlias);
 			if(verifySig(message.toByteArray(), userCert.getPublicKey(), dec.decodeBuffer(signature))){
-				//System.out.println("Signature of user " + userAlias + " succesfully verified");
+				System.out.println("Signature of user " + userAlias + " succesfully verified");
 				verified = true;
 			} else {
 				System.err.println("Failure on verifying signature of user " + userAlias + ".");

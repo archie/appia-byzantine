@@ -235,13 +235,13 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		echoEvent.popValuesFromMessage();
 
 		if (echoEvent.isEcho()) {
-			//System.err.println("Collect Echo Reply called");
+			System.err.println("Collect Echo Reply called");
 			collectEchoReply(echoEvent, alias, signature);
 		} else if (echoEvent.isFinal() && !echoEvent.isEcho()) {
-			//System.err.println("Deliver Final called");
+			System.err.println("Deliver Final called");
 			deliverFinal(echoEvent);
 		} else if (!echoEvent.isEcho() && !echoEvent.isFinal()) {
-			//System.err.println("Send Echo Reply called dst:" + echoEvent.dest + " src:" + echoEvent.source);
+			System.err.println("Send Echo Reply called dst:" + echoEvent.dest + " src:" + echoEvent.source);
 			sendEchoReply(echoEvent);			
 		}
 	}
@@ -302,6 +302,10 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 		// Add to reply queue.
 		replyQueue.get(echoEvent.getSequenceNumber()).add(echoEvent);
 		
+		int len = replyQueue.get(echoEvent.getSequenceNumber()).size();
+		
+		System.err.println("ReplyQueue size is: " + len + " " + Math.floor((N + F)/2.0) + " " + sentFinal);
+		
 		// From algo: When #echos > (N + F)/2, and the echos are verified, then continue
 		// Note: The verification is done by the signature layer below. Msgs who's verification has
 		// failed won't make it till here.
@@ -313,7 +317,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 			/* See if we have more than (N + F)/2 occurrences for the same message. */
 			for (EchoBroadcastEvent ebe1 : replyQueue.get (echoEvent.getSequenceNumber())) {
 				int num = 0;
-				
+
 				if (alreadyCovered.contains(ebe1.getText()))
 				{
 					continue;
@@ -346,6 +350,7 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	}
 	
 	private void sendFinal(EchoBroadcastEvent echoEvent) {
+		System.err.println("SendFinal called");
 		sentFinal = true;
 		EchoBroadcastEvent reply = new EchoBroadcastEvent ();
 		reply.setFinal(true);
@@ -451,11 +456,14 @@ public class EchoBroadcastSession extends Session implements InitializableSessio
 	/* Reinitialises the session, called by ByzantineConsistentChannel */
 	public void reset ()
 	{
+		//System.err.println("Reset called lolz");
 		sentEcho = false;
 		sentFinal = false;
 		delivered = false;
 		aliases = new String [processes.getAllProcesses().length];
 		sigmas = new String [processes.getAllProcesses().length];
+		replyBuffer = new ArrayList<EchoBroadcastEvent> ();
+		//replyQueue = new HashMap<Integer, List<EchoBroadcastEvent> >();
 	}
 
 }
