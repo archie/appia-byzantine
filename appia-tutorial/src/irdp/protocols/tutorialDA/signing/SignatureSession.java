@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. 
  *
- * Initial developer(s): Alexandre Pinto and Hugo Miranda.
+ * @author Paulo Ricardo, Lalith Suresh and Marcus Ljungblad
  * Contributor(s): See Appia web page for a list of contributors.
  */
  package irdp.protocols.tutorialDA.signing;
