@@ -279,7 +279,8 @@ public class BByzantineConsistentChannelSession extends Session implements Initi
 				/*
 				 * Set appropriate child channel before transmitting
 				 */
-				echoEvent.setChannel(childChannels[processes.getSelfRank()]);			
+				echoEvent.setChannel(childChannels[processes.getSelfRank()]);	
+				bcbs[processes.getSelfRank()].reset ();
 				try {
 					echoEvent.init ();
 					echoEvent.go ();
